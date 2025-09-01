@@ -31,9 +31,9 @@ class AttachmentModel {
       fileName: json['file_name'] as String,
       filePath: json['file_path'] as String,
       mimeType: json['mime_type'] as String?,
-      fileSize: json['file_size'] as int,
+      fileSize: json['file_size'] as int?,
       createdAt: json['created_at'] as String,
-      syncStatus: json['sync_status'] as String,
+      syncStatus: json['sync_status'] as String? ?? 'pending',
       lastSynced: json['last_synced'] as String?,
     );
   }

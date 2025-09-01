@@ -24,7 +24,7 @@ class TagModel {
       name: json['name'] as String,
       color: json['color'] as String,
       createdAt: json['created_at'] as String,
-      syncStatus: json['sync_status'] as String,
+      syncStatus: json['sync_status'] as String? ?? 'pending',
       lastSynced: json['last_synced'] as String?,
     );
   }

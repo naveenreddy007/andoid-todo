@@ -1,10 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 import 'ui/screens/home_screen.dart';
 import 'ui/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
+import 'debug_helper.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Insert test todos for debugging
+  await DebugHelper.insertTestTodos();
+  await DebugHelper.fetchAndPrintTodos();
+  
+  // Start ADB command processing timer
+  Timer.periodic(const Duration(seconds: 2), (timer) {
+    DebugHelper.processAdbCommands();
+  });
+  
   runApp(const ProviderScope(child: NoteTakingApp()));
 }
 

@@ -31,12 +31,12 @@ class ReminderModel {
       id: json['id'] as String,
       todoId: json['todo_id'] as String,
       type: json['type'] as String,
-      dateTime: json['date_time'] as String,
+      dateTime: json['reminder_datetime'] as String,
       message: json['message'] as String?,
       isActive: (json['is_active'] as int) == 1,
       createdAt: json['created_at'] as String,
-      updatedAt: json['updated_at'] as String,
-      syncStatus: json['sync_status'] as String,
+      updatedAt: json['created_at'] as String,
+      syncStatus: json['sync_status'] as String? ?? 'pending',
       lastSynced: json['last_synced'] as String?,
     );
   }
