@@ -8,6 +8,9 @@ import 'dart:io';
 class DatabaseHelper {
   static DatabaseHelper? _instance;
   static Database? _database;
+  final _databaseStreamController = StreamController<void>.broadcast();
+
+  Stream<void> get databaseStream => _databaseStreamController.stream;
 
   DatabaseHelper._internal();
 
@@ -40,6 +43,7 @@ class DatabaseHelper {
     }
 
     String path = join(await getDatabasesPath(), _dbName);
+    print('Database path: $path');
     return await openDatabase(
       path,
       version: _dbVersion,
@@ -183,11 +187,17 @@ class DatabaseHelper {
       'CREATE INDEX idx_notes_is_archived ON notes(is_archived)',
     );
     await db.execute('CREATE INDEX idx_notes_is_deleted ON notes(is_deleted)');
-    
+
     // Search table indexes
-    await db.execute('CREATE INDEX idx_notes_search_title ON notes_search(title)');
-    await db.execute('CREATE INDEX idx_notes_search_content ON notes_search(plain_text)');
-    await db.execute('CREATE INDEX idx_notes_search_note_id ON notes_search(note_id)');
+    await db.execute(
+      'CREATE INDEX idx_notes_search_title ON notes_search(title)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_notes_search_content ON notes_search(plain_text)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_notes_search_note_id ON notes_search(note_id)',
+    );
   }
 
   Future<void> _insertDefaultData(Database db) async {
@@ -298,7 +308,10 @@ class DatabaseHelper {
 
   Future<int> insert(String table, Map<String, dynamic> values) async {
     final db = await database;
-    return await db.insert(table, values);
+    final result = await db.insert(table, values);
+    _databaseStreamController.add(null);
+    return result;
+  } return await db.insert(table, values);
   }
 
   Future<int> update(
@@ -308,7 +321,9 @@ class DatabaseHelper {
     List<dynamic>? whereArgs,
   }) async {
     final db = await database;
-    return await db.update(table, values, where: where, whereArgs: whereArgs);
+    final result = await db.update(table, values, where: where, whereArgs: whereArgs);
+    _databaseStreamController.add(null);
+    return result;
   }
 
   Future<int> delete(
@@ -317,7 +332,9 @@ class DatabaseHelper {
     List<dynamic>? whereArgs,
   }) async {
     final db = await database;
-    return await db.delete(table, where: where, whereArgs: whereArgs);
+    final result = await db.delete(table, where: where, whereArgs: whereArgs);
+    _databaseStreamController.add(null);
+    return result;
   }
 
   Future<List<Map<String, dynamic>>> rawQuery(
@@ -346,7 +363,9 @@ class DatabaseHelper {
   // Transaction support
   Future<T> transaction<T>(Future<T> Function(Transaction txn) action) async {
     final db = await database;
-    return await db.transaction(action);
+    final result = await db.transaction(action);
+    _databaseStreamController.add(null);
+    return result;
   }
 
   // Batch operations

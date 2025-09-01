@@ -186,9 +186,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             return ListTile(
               title: Text(priority.name.toUpperCase()),
               leading: Icon(
-                _selectedPriority == priority 
-                  ? Icons.radio_button_checked 
-                  : Icons.radio_button_unchecked,
+                _selectedPriority == priority
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
                 color: Theme.of(context).colorScheme.primary,
               ),
               trailing: Container(
@@ -262,9 +262,6 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       } else {
         await operations.saveNote(note);
       }
-
-      // Refresh the notes list
-      final _ = ref.refresh(notesProvider);
 
       if (mounted) {
         Navigator.pop(context);

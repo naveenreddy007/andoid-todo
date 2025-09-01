@@ -16,9 +16,9 @@ final noteRepositoryProvider = Provider<NoteRepository>((ref) {
 });
 
 // Notes list provider
-final notesProvider = FutureProvider<List<Note>>((ref) async {
+final notesProvider = StreamProvider<List<Note>>((ref) {
   final repository = ref.watch(noteRepositoryProvider);
-  return repository.getAllNotes();
+  return repository.watchNotes();
 });
 
 // Individual note provider

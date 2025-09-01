@@ -11,8 +11,19 @@ import '../models/note_model.dart';
 
 class LocalNoteRepository implements NoteRepository {
   final DatabaseHelper _databaseHelper;
+  final _notesStreamController = StreamController<List<Note>>.broadcast();
 
-  LocalNoteRepository(this._databaseHelper);
+  LocalNoteRepository(this._databaseHelper) {
+    _databaseHelper.databaseStream.listen((_) {
+      getAllNotes().then((notes) => _notesStreamController.add(notes));
+    });
+  }
+
+  @override
+  Stream<List<Note>> watchNotes() {
+    getAllNotes().then((notes) => _notesStreamController.add(notes));
+    return _notesStreamController.stream;
+  }
 
   @override
   Future<List<Note>> getAllNotes() async {
@@ -29,7 +40,9 @@ class LocalNoteRepository implements NoteRepository {
         final noteModel = NoteModel.fromJson(map);
         final tagIds = await _getTagIdsForNote(noteModel.id);
         final attachmentIds = await _getAttachmentIdsForNote(noteModel.id);
-        notes.add(noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds));
+        notes.add(
+          noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds),
+        );
       }
 
       return notes;
@@ -53,7 +66,7 @@ class LocalNoteRepository implements NoteRepository {
       final noteModel = NoteModel.fromJson(maps.first);
       final tagIds = await _getTagIdsForNote(noteModel.id);
       final attachmentIds = await _getAttachmentIdsForNote(noteModel.id);
-      
+
       return noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds);
     } catch (e) {
       throw app_exceptions.DatabaseException('Failed to get note by id: $e');
@@ -65,7 +78,7 @@ class LocalNoteRepository implements NoteRepository {
     try {
       await _databaseHelper.transaction((txn) async {
         final noteModel = NoteModel.fromEntity(note);
-        
+
         // Insert or update note
         await txn.insert(
           DatabaseConstants.notesTable,
@@ -89,7 +102,7 @@ class LocalNoteRepository implements NoteRepository {
     try {
       await _databaseHelper.transaction((txn) async {
         final noteModel = NoteModel.fromEntity(note);
-        
+
         // Update note
         final rowsAffected = await txn.update(
           DatabaseConstants.notesTable,
@@ -169,7 +182,9 @@ class LocalNoteRepository implements NoteRepository {
       );
 
       if (rowsAffected == 0) {
-        throw app_exceptions.DatabaseException('Note not found for unarchiving');
+        throw app_exceptions.DatabaseException(
+          'Note not found for unarchiving',
+        );
       }
     } catch (e) {
       throw app_exceptions.DatabaseException('Failed to unarchive note: $e');
@@ -187,7 +202,7 @@ class LocalNoteRepository implements NoteRepository {
       onListen: () {
         // Initial load
         _loadAndEmitNotes(controller);
-        
+
         // Poll for changes every 2 seconds
         timer = Timer.periodic(const Duration(seconds: 2), (_) {
           _loadAndEmitNotes(controller);
@@ -202,15 +217,17 @@ class LocalNoteRepository implements NoteRepository {
   }
 
   void _loadAndEmitNotes(StreamController<List<Note>> controller) {
-    getAllNotes().then((notes) {
-      if (!controller.isClosed) {
-        controller.add(notes);
-      }
-    }).catchError((error) {
-      if (!controller.isClosed) {
-        controller.addError(error);
-      }
-    });
+    getAllNotes()
+        .then((notes) {
+          if (!controller.isClosed) {
+            controller.add(notes);
+          }
+        })
+        .catchError((error) {
+          if (!controller.isClosed) {
+            controller.addError(error);
+          }
+        });
   }
 
   @override
@@ -218,7 +235,8 @@ class LocalNoteRepository implements NoteRepository {
     try {
       final maps = await _databaseHelper.query(
         DatabaseConstants.notesTable,
-        where: '${DatabaseConstants.noteCategoryId} = ? AND ${DatabaseConstants.noteIsDeleted} = ?',
+        where:
+            '${DatabaseConstants.noteCategoryId} = ? AND ${DatabaseConstants.noteIsDeleted} = ?',
         whereArgs: [categoryId, 0],
         orderBy: '${DatabaseConstants.noteUpdatedAt} DESC',
       );
@@ -228,31 +246,40 @@ class LocalNoteRepository implements NoteRepository {
         final noteModel = NoteModel.fromJson(map);
         final tagIds = await _getTagIdsForNote(noteModel.id);
         final attachmentIds = await _getAttachmentIdsForNote(noteModel.id);
-        notes.add(noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds));
+        notes.add(
+          noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds),
+        );
       }
 
       return notes;
     } catch (e) {
-      throw app_exceptions.DatabaseException('Failed to get notes by category: $e');
+      throw app_exceptions.DatabaseException(
+        'Failed to get notes by category: $e',
+      );
     }
   }
 
   @override
   Future<List<Note>> getNotesByTag(String tagId) async {
     try {
-      final maps = await _databaseHelper.rawQuery('''
+      final maps = await _databaseHelper.rawQuery(
+        '''
         SELECT n.* FROM ${DatabaseConstants.notesTable} n
         INNER JOIN ${DatabaseConstants.noteTagsTable} nt ON n.${DatabaseConstants.noteId} = nt.${DatabaseConstants.noteTagNoteId}
         WHERE nt.${DatabaseConstants.noteTagTagId} = ? AND n.${DatabaseConstants.noteIsDeleted} = ?
         ORDER BY n.${DatabaseConstants.noteUpdatedAt} DESC
-      ''', [tagId, 0]);
+      ''',
+        [tagId, 0],
+      );
 
       final notes = <Note>[];
       for (final map in maps) {
         final noteModel = NoteModel.fromJson(map);
         final tagIds = await _getTagIdsForNote(noteModel.id);
         final attachmentIds = await _getAttachmentIdsForNote(noteModel.id);
-        notes.add(noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds));
+        notes.add(
+          noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds),
+        );
       }
 
       return notes;
@@ -267,7 +294,8 @@ class LocalNoteRepository implements NoteRepository {
       final priorityString = _priorityToString(priority);
       final maps = await _databaseHelper.query(
         DatabaseConstants.notesTable,
-        where: '${DatabaseConstants.notePriority} = ? AND ${DatabaseConstants.noteIsDeleted} = ?',
+        where:
+            '${DatabaseConstants.notePriority} = ? AND ${DatabaseConstants.noteIsDeleted} = ?',
         whereArgs: [priorityString, 0],
         orderBy: '${DatabaseConstants.noteUpdatedAt} DESC',
       );
@@ -277,12 +305,16 @@ class LocalNoteRepository implements NoteRepository {
         final noteModel = NoteModel.fromJson(map);
         final tagIds = await _getTagIdsForNote(noteModel.id);
         final attachmentIds = await _getAttachmentIdsForNote(noteModel.id);
-        notes.add(noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds));
+        notes.add(
+          noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds),
+        );
       }
 
       return notes;
     } catch (e) {
-      throw app_exceptions.DatabaseException('Failed to get notes by priority: $e');
+      throw app_exceptions.DatabaseException(
+        'Failed to get notes by priority: $e',
+      );
     }
   }
 
@@ -291,7 +323,8 @@ class LocalNoteRepository implements NoteRepository {
     try {
       final maps = await _databaseHelper.query(
         DatabaseConstants.notesTable,
-        where: '${DatabaseConstants.noteIsArchived} = ? AND ${DatabaseConstants.noteIsDeleted} = ?',
+        where:
+            '${DatabaseConstants.noteIsArchived} = ? AND ${DatabaseConstants.noteIsDeleted} = ?',
         whereArgs: [1, 0],
         orderBy: '${DatabaseConstants.noteUpdatedAt} DESC',
       );
@@ -301,12 +334,16 @@ class LocalNoteRepository implements NoteRepository {
         final noteModel = NoteModel.fromJson(map);
         final tagIds = await _getTagIdsForNote(noteModel.id);
         final attachmentIds = await _getAttachmentIdsForNote(noteModel.id);
-        notes.add(noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds));
+        notes.add(
+          noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds),
+        );
       }
 
       return notes;
     } catch (e) {
-      throw app_exceptions.DatabaseException('Failed to get archived notes: $e');
+      throw app_exceptions.DatabaseException(
+        'Failed to get archived notes: $e',
+      );
     }
   }
 
@@ -325,7 +362,9 @@ class LocalNoteRepository implements NoteRepository {
         final noteModel = NoteModel.fromJson(map);
         final tagIds = await _getTagIdsForNote(noteModel.id);
         final attachmentIds = await _getAttachmentIdsForNote(noteModel.id);
-        notes.add(noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds));
+        notes.add(
+          noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds),
+        );
       }
 
       return notes;
@@ -344,7 +383,9 @@ class LocalNoteRepository implements NoteRepository {
         final noteModel = NoteModel.fromJson(map);
         final tagIds = await _getTagIdsForNote(noteModel.id);
         final attachmentIds = await _getAttachmentIdsForNote(noteModel.id);
-        notes.add(noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds));
+        notes.add(
+          noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds),
+        );
       }
 
       return notes;
@@ -358,7 +399,8 @@ class LocalNoteRepository implements NoteRepository {
     try {
       final maps = await _databaseHelper.query(
         DatabaseConstants.notesTable,
-        where: '${DatabaseConstants.noteReminderDate} IS NOT NULL AND ${DatabaseConstants.noteIsDeleted} = ?',
+        where:
+            '${DatabaseConstants.noteReminderDate} IS NOT NULL AND ${DatabaseConstants.noteIsDeleted} = ?',
         whereArgs: [0],
         orderBy: '${DatabaseConstants.noteReminderDate} ASC',
       );
@@ -368,12 +410,16 @@ class LocalNoteRepository implements NoteRepository {
         final noteModel = NoteModel.fromJson(map);
         final tagIds = await _getTagIdsForNote(noteModel.id);
         final attachmentIds = await _getAttachmentIdsForNote(noteModel.id);
-        notes.add(noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds));
+        notes.add(
+          noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds),
+        );
       }
 
       return notes;
     } catch (e) {
-      throw app_exceptions.DatabaseException('Failed to get notes with reminders: $e');
+      throw app_exceptions.DatabaseException(
+        'Failed to get notes with reminders: $e',
+      );
     }
   }
 
@@ -392,12 +438,16 @@ class LocalNoteRepository implements NoteRepository {
         final noteModel = NoteModel.fromJson(map);
         final tagIds = await _getTagIdsForNote(noteModel.id);
         final attachmentIds = await _getAttachmentIdsForNote(noteModel.id);
-        notes.add(noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds));
+        notes.add(
+          noteModel.toEntity(tagIds: tagIds, attachmentIds: attachmentIds),
+        );
       }
 
       return notes;
     } catch (e) {
-      throw app_exceptions.DatabaseException('Failed to get notes due for sync: $e');
+      throw app_exceptions.DatabaseException(
+        'Failed to get notes due for sync: $e',
+      );
     }
   }
 
@@ -410,7 +460,9 @@ class LocalNoteRepository implements NoteRepository {
       whereArgs: [noteId],
     );
 
-    return maps.map((map) => map[DatabaseConstants.noteTagTagId] as String).toList();
+    return maps
+        .map((map) => map[DatabaseConstants.noteTagTagId] as String)
+        .toList();
   }
 
   Future<List<String>> _getAttachmentIdsForNote(String noteId) async {
@@ -421,10 +473,16 @@ class LocalNoteRepository implements NoteRepository {
       whereArgs: [noteId],
     );
 
-    return maps.map((map) => map[DatabaseConstants.attachmentId] as String).toList();
+    return maps
+        .map((map) => map[DatabaseConstants.attachmentId] as String)
+        .toList();
   }
 
-  Future<void> _saveNoteTags(Transaction txn, String noteId, List<String> tagIds) async {
+  Future<void> _saveNoteTags(
+    Transaction txn,
+    String noteId,
+    List<String> tagIds,
+  ) async {
     // Delete existing tags for this note
     await txn.delete(
       DatabaseConstants.noteTagsTable,
@@ -442,14 +500,17 @@ class LocalNoteRepository implements NoteRepository {
   }
 
   Future<void> _updateFtsEntry(Transaction txn, Note note) async {
-    await txn.rawUpdate('''
+    await txn.rawUpdate(
+      '''
       UPDATE ${DatabaseConstants.notesFtsTable} 
       SET title = ?, plain_text = ? 
       WHERE rowid = (
         SELECT rowid FROM ${DatabaseConstants.notesTable} 
         WHERE ${DatabaseConstants.noteId} = ?
       )
-    ''', [note.title, note.plainText, note.id]);
+    ''',
+      [note.title, note.plainText, note.id],
+    );
   }
 
   String _priorityToString(Priority priority) {
