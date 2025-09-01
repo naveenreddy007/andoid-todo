@@ -8,5 +8,7 @@ abstract class CategoryRepository {
   Future<void> updateCategory(Category category);
   Future<void> deleteCategory(String id);
   Stream<List<Category>> watchCategories();
-  Future<int> getNoteCountByCategory(String categoryId);
+  Future<int> getTodoCountByCategory(String categoryId);
+  Future<bool> isCategoryInUse(String categoryId);
+  Future<List<Category>> getCategoriesDueForSync();
 }

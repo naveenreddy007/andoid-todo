@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repositories/local_tag_repository.dart';
 import '../domain/entities/tag.dart';
 import '../domain/repositories/tag_repository.dart';
-import 'note_provider.dart';
+import 'todo_provider.dart';
 
 // Tag repository provider
 final tagRepositoryProvider = Provider<TagRepository>((ref) {
@@ -16,19 +16,25 @@ final tagsProvider = FutureProvider<List<Tag>>((ref) async {
   return repository.getAllTags();
 });
 
+// Tags stream provider
+final tagsStreamProvider = StreamProvider<List<Tag>>((ref) {
+  final repository = ref.watch(tagRepositoryProvider);
+  return repository.watchTags();
+});
+
 // Individual tag provider
 final tagProvider = FutureProvider.family<Tag?, String>((ref, id) async {
   final repository = ref.watch(tagRepositoryProvider);
   return repository.getTagById(id);
 });
 
-// Tags for note provider
-final tagsForNoteProvider = FutureProvider.family<List<Tag>, String>((
+// Tags for todo provider
+final tagsForTodoProvider = FutureProvider.family<List<Tag>, String>((
   ref,
-  noteId,
+  todoId,
 ) async {
   final repository = ref.watch(tagRepositoryProvider);
-  return repository.getTagsForNote(noteId);
+  return repository.getTagsForTodo(todoId);
 });
 
 // Popular tags provider
@@ -76,20 +82,20 @@ class TagOperationsNotifier extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  Future<void> addTagToNote(String noteId, String tagId) async {
+  Future<void> addTagToTodo(String todoId, String tagId) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.addTagToNote(noteId, tagId);
+      await _repository.addTagToTodo(todoId, tagId);
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
     }
   }
 
-  Future<void> removeTagFromNote(String noteId, String tagId) async {
+  Future<void> removeTagFromTodo(String todoId, String tagId) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.removeTagFromNote(noteId, tagId);
+      await _repository.removeTagFromTodo(todoId, tagId);
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);

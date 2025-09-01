@@ -1,22 +1,30 @@
 import 'dart:async';
 
+import 'package:sqflite/sqflite.dart';
 
 import '../../core/constants/database_constants.dart';
 import '../../core/errors/app_exceptions.dart' as app_exceptions;
 import '../../domain/entities/category.dart';
+
 import '../../domain/repositories/category_repository.dart';
 import '../../services/local/database_helper.dart';
 import '../models/category_model.dart';
 
 class LocalCategoryRepository implements CategoryRepository {
   final DatabaseHelper _databaseHelper;
+  final _categoriesStreamController = StreamController<List<Category>>.broadcast();
 
-  LocalCategoryRepository(this._databaseHelper);
+  LocalCategoryRepository(this._databaseHelper) {
+    _databaseHelper.databaseStream.listen((_) {
+      getAllCategories().then((categories) => _categoriesStreamController.add(categories));
+    });
+  }
 
   @override
   Future<List<Category>> getAllCategories() async {
     try {
-      final maps = await _databaseHelper.query(
+      final db = await _databaseHelper.database;
+      final maps = await db.query(
         DatabaseConstants.categoriesTable,
         orderBy: '${DatabaseConstants.categoryCreatedAt} ASC',
       );
@@ -33,7 +41,8 @@ class LocalCategoryRepository implements CategoryRepository {
   @override
   Future<Category?> getCategoryById(String id) async {
     try {
-      final maps = await _databaseHelper.query(
+      final db = await _databaseHelper.database;
+      final maps = await db.query(
         DatabaseConstants.categoriesTable,
         where: '${DatabaseConstants.categoryId} = ?',
         whereArgs: [id],
@@ -52,7 +61,8 @@ class LocalCategoryRepository implements CategoryRepository {
   @override
   Future<Category?> getCategoryByName(String name) async {
     try {
-      final maps = await _databaseHelper.query(
+      final db = await _databaseHelper.database;
+      final maps = await db.query(
         DatabaseConstants.categoriesTable,
         where: '${DatabaseConstants.categoryName} = ?',
         whereArgs: [name],
@@ -71,10 +81,12 @@ class LocalCategoryRepository implements CategoryRepository {
   @override
   Future<void> saveCategory(Category category) async {
     try {
+      final db = await _databaseHelper.database;
       final categoryModel = CategoryModel.fromEntity(category);
-      await _databaseHelper.insert(
+      await db.insert(
         DatabaseConstants.categoriesTable,
         categoryModel.toJson(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } catch (e) {
       throw app_exceptions.DatabaseException('Failed to save category: $e');
@@ -84,8 +96,9 @@ class LocalCategoryRepository implements CategoryRepository {
   @override
   Future<void> updateCategory(Category category) async {
     try {
+      final db = await _databaseHelper.database;
       final categoryModel = CategoryModel.fromEntity(category);
-      final rowsAffected = await _databaseHelper.update(
+      final rowsAffected = await db.update(
         DatabaseConstants.categoriesTable,
         categoryModel.toJson(),
         where: '${DatabaseConstants.categoryId} = ?',
@@ -103,7 +116,8 @@ class LocalCategoryRepository implements CategoryRepository {
   @override
   Future<void> deleteCategory(String id) async {
     try {
-      final rowsAffected = await _databaseHelper.delete(
+      final db = await _databaseHelper.database;
+      final rowsAffected = await db.delete(
         DatabaseConstants.categoriesTable,
         where: '${DatabaseConstants.categoryId} = ?',
         whereArgs: [id],
@@ -119,52 +133,62 @@ class LocalCategoryRepository implements CategoryRepository {
 
   @override
   Stream<List<Category>> watchCategories() {
-    late StreamController<List<Category>> controller;
-    Timer? timer;
-
-    controller = StreamController<List<Category>>(
-      onListen: () {
-        _loadAndEmitCategories(controller);
-        timer = Timer.periodic(const Duration(seconds: 2), (_) {
-          _loadAndEmitCategories(controller);
-        });
-      },
-      onCancel: () {
-        timer?.cancel();
-      },
-    );
-
-    return controller.stream;
-  }
-
-  void _loadAndEmitCategories(StreamController<List<Category>> controller) {
-    getAllCategories()
-        .then((categories) {
-          if (!controller.isClosed) {
-            controller.add(categories);
-          }
-        })
-        .catchError((error) {
-          if (!controller.isClosed) {
-            controller.addError(error);
-          }
-        });
+    getAllCategories().then((categories) => _categoriesStreamController.add(categories));
+    return _categoriesStreamController.stream;
   }
 
   @override
-  Future<int> getNoteCountByCategory(String categoryId) async {
+  Future<int> getTodoCountByCategory(String categoryId) async {
     try {
-      final maps = await _databaseHelper.rawQuery(
-        '''
-        SELECT COUNT(*) as count FROM ${DatabaseConstants.notesTable}
-        WHERE ${DatabaseConstants.noteCategoryId} = ? AND ${DatabaseConstants.noteIsDeleted} = 0
-      ''',
+      final db = await _databaseHelper.database;
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM ${DatabaseConstants.todosTable} WHERE ${DatabaseConstants.todoCategoryId} = ?',
         [categoryId],
       );
 
-      return maps.first['count'] as int;
+      return result.first['count'] as int;
     } catch (e) {
-      throw app_exceptions.DatabaseException('Failed to get note count by category: $e');
+      throw app_exceptions.DatabaseException('Failed to get todo count by category: $e');
     }
+  }
+
+  @override
+  Future<bool> isCategoryInUse(String categoryId) async {
+    try {
+      final db = await _databaseHelper.database;
+      final result = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM ${DatabaseConstants.todosTable} WHERE ${DatabaseConstants.todoCategoryId} = ?',
+        [categoryId],
+      );
+
+      final count = result.first['count'] as int;
+      return count > 0;
+    } catch (e) {
+      throw app_exceptions.DatabaseException('Failed to check if category is in use: $e');
+    }
+  }
+
+  @override
+  Future<List<Category>> getCategoriesDueForSync() async {
+    try {
+      final db = await _databaseHelper.database;
+      final maps = await db.query(
+        DatabaseConstants.categoriesTable,
+        orderBy: '${DatabaseConstants.categoryCreatedAt} ASC',
+      );
+
+      return maps.map((map) {
+        final categoryModel = CategoryModel.fromJson(map);
+        return categoryModel.toEntity();
+      }).toList();
+    } catch (e) {
+      throw app_exceptions.DatabaseException('Failed to get categories due for sync: $e');
+    }
+  }
+
+
+
+  void dispose() {
+    _categoriesStreamController.close();
   }
 }

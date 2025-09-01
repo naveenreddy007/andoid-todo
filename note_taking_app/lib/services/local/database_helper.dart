@@ -60,7 +60,6 @@ class DatabaseHelper {
   Future<void> _onCreate(Database db, int version) async {
     await _createTables(db);
     await _createIndexes(db);
-    await _createFtsTriggers(db);
     await _insertDefaultData(db);
   }
 
@@ -69,7 +68,6 @@ class DatabaseHelper {
       await _dropTables(db);
       await _createTables(db);
       await _createIndexes(db);
-      await _createFtsTriggers(db);
       await _insertDefaultData(db);
     }
   }
@@ -77,108 +75,153 @@ class DatabaseHelper {
   Future<void> _createTables(Database db) async {
     await db.execute(DatabaseConstants.createCategoriesTable);
     await db.execute(DatabaseConstants.createTagsTable);
-    await db.execute(DatabaseConstants.createNotesTable);
-    await db.execute(DatabaseConstants.createNoteTagsTable);
+    await db.execute(DatabaseConstants.createTodosTable);
+    await db.execute(DatabaseConstants.createTodoTagsTable);
+    await db.execute(DatabaseConstants.createRemindersTable);
     await db.execute(DatabaseConstants.createAttachmentsTable);
     await db.execute(DatabaseConstants.createSyncMetadataTable);
-    await db.execute(DatabaseConstants.createNotesSearchTable);
+    await db.execute(DatabaseConstants.createGoogleDriveFilesTable);
   }
 
   Future<void> _createIndexes(Database db) async {
-    await db.execute(DatabaseConstants.idxNotesUpdatedAt);
-    await db.execute(DatabaseConstants.idxNotesReminderDate);
-    await db.execute(DatabaseConstants.idxNotesCategory);
-    await db.execute(DatabaseConstants.idxNotesSyncStatus);
-    await db.execute(DatabaseConstants.idxSyncMetadataEntity);
-    await db.execute(DatabaseConstants.idxNotesPriority);
-    await db.execute(DatabaseConstants.idxNotesIsArchived);
-    await db.execute(DatabaseConstants.idxNotesIsDeleted);
-    await db.execute(DatabaseConstants.idxNotesSearchTitle);
-    await db.execute(DatabaseConstants.idxNotesSearchContent);
-    await db.execute(DatabaseConstants.idxNotesSearchNoteId);
+    await db.execute(DatabaseConstants.idxTodosPriority);
+    await db.execute(DatabaseConstants.idxTodosStatus);
+    await db.execute(DatabaseConstants.idxTodosDueDate);
+    await db.execute(DatabaseConstants.idxTodosIsDeleted);
+    await db.execute(DatabaseConstants.idxRemindersDateTime);
+    await db.execute(DatabaseConstants.idxRemindersTodoId);
   }
 
   Future<void> _insertDefaultData(Database db) async {
+    // Insert default categories
     await db.insert(DatabaseConstants.categoriesTable, {
-      'id': 'personal',
-      'name': 'Personal',
-      'icon': 'person',
-      'color': '#2196F3',
-      'created_at': DateTime.now().toIso8601String(),
+      DatabaseConstants.categoryId: 'personal',
+      DatabaseConstants.categoryName: 'Personal',
+      DatabaseConstants.categoryIcon: 'person',
+      DatabaseConstants.categoryColor: '#2196F3',
+      DatabaseConstants.categoryCreatedAt: DateTime.now().toIso8601String(),
     });
 
     await db.insert(DatabaseConstants.categoriesTable, {
-      'id': 'work',
-      'name': 'Work',
-      'icon': 'work',
-      'color': '#4CAF50',
-      'created_at': DateTime.now().toIso8601String(),
+      DatabaseConstants.categoryId: 'work',
+      DatabaseConstants.categoryName: 'Work',
+      DatabaseConstants.categoryIcon: 'work',
+      DatabaseConstants.categoryColor: '#4CAF50',
+      DatabaseConstants.categoryCreatedAt: DateTime.now().toIso8601String(),
     });
 
     await db.insert(DatabaseConstants.categoriesTable, {
-      'id': 'ideas',
-      'name': 'Ideas',
-      'icon': 'lightbulb',
-      'color': '#FF9800',
-      'created_at': DateTime.now().toIso8601String(),
+      DatabaseConstants.categoryId: 'shopping',
+      DatabaseConstants.categoryName: 'Shopping',
+      DatabaseConstants.categoryIcon: 'shopping_cart',
+      DatabaseConstants.categoryColor: '#FF9800',
+      DatabaseConstants.categoryCreatedAt: DateTime.now().toIso8601String(),
+    });
+
+    await db.insert(DatabaseConstants.categoriesTable, {
+      DatabaseConstants.categoryId: 'health',
+      DatabaseConstants.categoryName: 'Health',
+      DatabaseConstants.categoryIcon: 'favorite',
+      DatabaseConstants.categoryColor: '#E91E63',
+      DatabaseConstants.categoryCreatedAt: DateTime.now().toIso8601String(),
+    });
+
+    // Insert default tags
+    await db.insert(DatabaseConstants.tagsTable, {
+      DatabaseConstants.tagId: 'urgent',
+      DatabaseConstants.tagName: 'Urgent',
+      DatabaseConstants.tagColor: '#F44336',
+      DatabaseConstants.tagCreatedAt: DateTime.now().toIso8601String(),
     });
 
     await db.insert(DatabaseConstants.tagsTable, {
-      'id': 'important',
-      'name': 'Important',
-      'color': '#F44336',
-      'created_at': DateTime.now().toIso8601String(),
+      DatabaseConstants.tagId: 'important',
+      DatabaseConstants.tagName: 'Important',
+      DatabaseConstants.tagColor: '#FF5722',
+      DatabaseConstants.tagCreatedAt: DateTime.now().toIso8601String(),
     });
 
     await db.insert(DatabaseConstants.tagsTable, {
-      'id': 'todo',
-      'name': 'Todo',
-      'color': '#9C27B0',
-      'created_at': DateTime.now().toIso8601String(),
+      DatabaseConstants.tagId: 'quick',
+      DatabaseConstants.tagName: 'Quick',
+      DatabaseConstants.tagColor: '#4CAF50',
+      DatabaseConstants.tagCreatedAt: DateTime.now().toIso8601String(),
+    });
+
+    await db.insert(DatabaseConstants.tagsTable, {
+      DatabaseConstants.tagId: 'meeting',
+      DatabaseConstants.tagName: 'Meeting',
+      DatabaseConstants.tagColor: '#9C27B0',
+      DatabaseConstants.tagCreatedAt: DateTime.now().toIso8601String(),
     });
   }
 
   Future<void> _dropTables(Database db) async {
-    await db.execute(
-      'DROP TABLE IF EXISTS ${DatabaseConstants.notesSearchTable}',
-    );
-    await db.execute(
-      'DROP TABLE IF EXISTS ${DatabaseConstants.syncMetadataTable}',
-    );
-    await db.execute(
-      'DROP TABLE IF EXISTS ${DatabaseConstants.attachmentsTable}',
-    );
-    await db.execute('DROP TABLE IF EXISTS ${DatabaseConstants.noteTagsTable}');
-    await db.execute('DROP TABLE IF EXISTS ${DatabaseConstants.notesTable}');
+    await db.execute('DROP TABLE IF EXISTS ${DatabaseConstants.googleDriveFilesTable}');
+    await db.execute('DROP TABLE IF EXISTS ${DatabaseConstants.todoTagsTable}');
+    await db.execute('DROP TABLE IF EXISTS ${DatabaseConstants.remindersTable}');
+    await db.execute('DROP TABLE IF EXISTS ${DatabaseConstants.attachmentsTable}');
+    await db.execute('DROP TABLE IF EXISTS ${DatabaseConstants.syncMetadataTable}');
+    await db.execute('DROP TABLE IF EXISTS ${DatabaseConstants.todosTable}');
     await db.execute('DROP TABLE IF EXISTS ${DatabaseConstants.tagsTable}');
-    await db.execute(
-      'DROP TABLE IF EXISTS ${DatabaseConstants.categoriesTable}',
-    );
+    await db.execute('DROP TABLE IF EXISTS ${DatabaseConstants.categoriesTable}');
   }
 
   Future<void> _createFtsTriggers(Database db) async {
-    await db.execute(DatabaseConstants.notesSearchInsertTrigger);
-    await db.execute(DatabaseConstants.notesSearchUpdateTrigger);
-    await db.execute(DatabaseConstants.notesSearchDeleteTrigger);
+    // FTS triggers not implemented yet
   }
 
   void notifyListeners() {
     _databaseStreamController.add(null);
   }
 
-  Future<List<Map<String, dynamic>>> searchNotes(String query) async {
+  // Basic CRUD operations for todos
+  Future<String> insertTodo(Map<String, dynamic> todo) async {
     final db = await database;
-    final searchTerm = '%$query%';
-    return await db.rawQuery(
-      '''
-      SELECT DISTINCT n.* FROM ${DatabaseConstants.notesTable} n
-      LEFT JOIN ${DatabaseConstants.notesSearchTable} ns ON n.id = ns.note_id
-      WHERE (n.title LIKE ? OR n.plain_text LIKE ? OR 
-             ns.title LIKE ? OR ns.plain_text LIKE ?)
-      AND n.is_deleted = 0
-      ORDER BY n.updated_at DESC
-    ''',
-      [searchTerm, searchTerm, searchTerm, searchTerm],
+    await db.insert(DatabaseConstants.todosTable, todo);
+    return todo[DatabaseConstants.todoId];
+  }
+
+  Future<Map<String, dynamic>?> getTodo(String id) async {
+    final db = await database;
+    final result = await db.query(
+      DatabaseConstants.todosTable,
+      where: '${DatabaseConstants.todoId} = ?',
+      whereArgs: [id],
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  Future<List<Map<String, dynamic>>> getAllTodos() async {
+    final db = await database;
+    return await db.query(
+      DatabaseConstants.todosTable,
+      where: '${DatabaseConstants.todoIsDeleted} = ?',
+      whereArgs: [0],
+      orderBy: '${DatabaseConstants.todoCreatedAt} DESC',
+    );
+  }
+
+  Future<void> updateTodo(String id, Map<String, dynamic> todo) async {
+    final db = await database;
+    await db.update(
+      DatabaseConstants.todosTable,
+      todo,
+      where: '${DatabaseConstants.todoId} = ?',
+      whereArgs: [id],
+    );
+  }
+
+  Future<void> deleteTodo(String id) async {
+    final db = await database;
+    await db.update(
+      DatabaseConstants.todosTable,
+      {
+        DatabaseConstants.todoIsDeleted: 1,
+        DatabaseConstants.todoUpdatedAt: DateTime.now().toIso8601String(),
+      },
+      where: '${DatabaseConstants.todoId} = ?',
+      whereArgs: [id],
     );
   }
 
@@ -193,9 +236,9 @@ class DatabaseHelper {
     final tables = [
       DatabaseConstants.syncMetadataTable,
       DatabaseConstants.attachmentsTable,
-      DatabaseConstants.noteTagsTable,
-      DatabaseConstants.notesSearchTable,
-      DatabaseConstants.notesTable,
+      DatabaseConstants.todoTagsTable,
+      DatabaseConstants.remindersTable,
+      DatabaseConstants.todosTable,
       DatabaseConstants.tagsTable,
       DatabaseConstants.categoriesTable,
     ];

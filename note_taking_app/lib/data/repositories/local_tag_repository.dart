@@ -1,22 +1,30 @@
 import 'dart:async';
 
+import 'package:sqflite/sqflite.dart';
 
 import '../../core/constants/database_constants.dart';
 import '../../core/errors/app_exceptions.dart' as app_exceptions;
 import '../../domain/entities/tag.dart';
+import '../../domain/entities/todo.dart';
 import '../../domain/repositories/tag_repository.dart';
 import '../../services/local/database_helper.dart';
 import '../models/tag_model.dart';
 
 class LocalTagRepository implements TagRepository {
   final DatabaseHelper _databaseHelper;
+  final _tagsStreamController = StreamController<List<Tag>>.broadcast();
 
-  LocalTagRepository(this._databaseHelper);
+  LocalTagRepository(this._databaseHelper) {
+    _databaseHelper.databaseStream.listen((_) {
+      getAllTags().then((tags) => _tagsStreamController.add(tags));
+    });
+  }
 
   @override
   Future<List<Tag>> getAllTags() async {
     try {
-      final maps = await _databaseHelper.query(
+      final db = await _databaseHelper.database;
+      final maps = await db.query(
         DatabaseConstants.tagsTable,
         orderBy: '${DatabaseConstants.tagName} ASC',
       );
@@ -33,7 +41,8 @@ class LocalTagRepository implements TagRepository {
   @override
   Future<Tag?> getTagById(String id) async {
     try {
-      final maps = await _databaseHelper.query(
+      final db = await _databaseHelper.database;
+      final maps = await db.query(
         DatabaseConstants.tagsTable,
         where: '${DatabaseConstants.tagId} = ?',
         whereArgs: [id],
@@ -52,7 +61,8 @@ class LocalTagRepository implements TagRepository {
   @override
   Future<Tag?> getTagByName(String name) async {
     try {
-      final maps = await _databaseHelper.query(
+      final db = await _databaseHelper.database;
+      final maps = await db.query(
         DatabaseConstants.tagsTable,
         where: '${DatabaseConstants.tagName} = ?',
         whereArgs: [name],
@@ -71,10 +81,12 @@ class LocalTagRepository implements TagRepository {
   @override
   Future<void> saveTag(Tag tag) async {
     try {
+      final db = await _databaseHelper.database;
       final tagModel = TagModel.fromEntity(tag);
-      await _databaseHelper.insert(
+      await db.insert(
         DatabaseConstants.tagsTable,
         tagModel.toJson(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } catch (e) {
       throw app_exceptions.DatabaseException('Failed to save tag: $e');
@@ -84,8 +96,9 @@ class LocalTagRepository implements TagRepository {
   @override
   Future<void> updateTag(Tag tag) async {
     try {
+      final db = await _databaseHelper.database;
       final tagModel = TagModel.fromEntity(tag);
-      final rowsAffected = await _databaseHelper.update(
+      final rowsAffected = await db.update(
         DatabaseConstants.tagsTable,
         tagModel.toJson(),
         where: '${DatabaseConstants.tagId} = ?',
@@ -103,7 +116,8 @@ class LocalTagRepository implements TagRepository {
   @override
   Future<void> deleteTag(String id) async {
     try {
-      final rowsAffected = await _databaseHelper.delete(
+      final db = await _databaseHelper.database;
+      final rowsAffected = await db.delete(
         DatabaseConstants.tagsTable,
         where: '${DatabaseConstants.tagId} = ?',
         whereArgs: [id],
@@ -119,49 +133,22 @@ class LocalTagRepository implements TagRepository {
 
   @override
   Stream<List<Tag>> watchTags() {
-    late StreamController<List<Tag>> controller;
-    Timer? timer;
-
-    controller = StreamController<List<Tag>>(
-      onListen: () {
-        _loadAndEmitTags(controller);
-        timer = Timer.periodic(const Duration(seconds: 2), (_) {
-          _loadAndEmitTags(controller);
-        });
-      },
-      onCancel: () {
-        timer?.cancel();
-      },
-    );
-
-    return controller.stream;
-  }
-
-  void _loadAndEmitTags(StreamController<List<Tag>> controller) {
-    getAllTags()
-        .then((tags) {
-          if (!controller.isClosed) {
-            controller.add(tags);
-          }
-        })
-        .catchError((error) {
-          if (!controller.isClosed) {
-            controller.addError(error);
-          }
-        });
+    getAllTags().then((tags) => _tagsStreamController.add(tags));
+    return _tagsStreamController.stream;
   }
 
   @override
-  Future<List<Tag>> getTagsForNote(String noteId) async {
+  Future<List<Tag>> getTagsForTodo(String todoId) async {
     try {
-      final maps = await _databaseHelper.rawQuery(
+      final db = await _databaseHelper.database;
+      final maps = await db.rawQuery(
         '''
         SELECT t.* FROM ${DatabaseConstants.tagsTable} t
-        INNER JOIN ${DatabaseConstants.noteTagsTable} nt ON t.${DatabaseConstants.tagId} = nt.${DatabaseConstants.noteTagTagId}
-        WHERE nt.${DatabaseConstants.noteTagNoteId} = ?
+        INNER JOIN ${DatabaseConstants.todoTagsTable} tt ON t.${DatabaseConstants.tagId} = tt.${DatabaseConstants.todoTagTagId}
+        WHERE tt.${DatabaseConstants.todoTagTodoId} = ?
         ORDER BY t.${DatabaseConstants.tagName} ASC
       ''',
-        [noteId],
+        [todoId],
       );
 
       return maps.map((map) {
@@ -169,44 +156,47 @@ class LocalTagRepository implements TagRepository {
         return tagModel.toEntity();
       }).toList();
     } catch (e) {
-      throw app_exceptions.DatabaseException('Failed to get tags for note: $e');
+      throw app_exceptions.DatabaseException('Failed to get tags for todo: $e');
     }
   }
 
   @override
-  Future<void> addTagToNote(String noteId, String tagId) async {
+  Future<void> addTagToTodo(String todoId, String tagId) async {
     try {
-      await _databaseHelper.insert(DatabaseConstants.noteTagsTable, {
-        DatabaseConstants.noteTagNoteId: noteId,
-        DatabaseConstants.noteTagTagId: tagId,
-      });
+      final db = await _databaseHelper.database;
+      await db.insert(DatabaseConstants.todoTagsTable, {
+        DatabaseConstants.todoTagTodoId: todoId,
+        DatabaseConstants.todoTagTagId: tagId,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     } catch (e) {
-      throw app_exceptions.DatabaseException('Failed to add tag to note: $e');
+      throw app_exceptions.DatabaseException('Failed to add tag to todo: $e');
     }
   }
 
   @override
-  Future<void> removeTagFromNote(String noteId, String tagId) async {
+  Future<void> removeTagFromTodo(String todoId, String tagId) async {
     try {
-      await _databaseHelper.delete(
-        DatabaseConstants.noteTagsTable,
+      final db = await _databaseHelper.database;
+      await db.delete(
+        DatabaseConstants.todoTagsTable,
         where:
-            '${DatabaseConstants.noteTagNoteId} = ? AND ${DatabaseConstants.noteTagTagId} = ?',
-        whereArgs: [noteId, tagId],
+            '${DatabaseConstants.todoTagTodoId} = ? AND ${DatabaseConstants.todoTagTagId} = ?',
+        whereArgs: [todoId, tagId],
       );
     } catch (e) {
-      throw app_exceptions.DatabaseException('Failed to remove tag from note: $e');
+      throw app_exceptions.DatabaseException('Failed to remove tag from todo: $e');
     }
   }
 
   @override
   Future<List<Tag>> getPopularTags(int limit) async {
     try {
-      final maps = await _databaseHelper.rawQuery(
+      final db = await _databaseHelper.database;
+      final maps = await db.rawQuery(
         '''
-        SELECT t.*, COUNT(nt.${DatabaseConstants.noteTagTagId}) as usage_count
+        SELECT t.*, COUNT(tt.${DatabaseConstants.todoTagTagId}) as usage_count
         FROM ${DatabaseConstants.tagsTable} t
-        LEFT JOIN ${DatabaseConstants.noteTagsTable} nt ON t.${DatabaseConstants.tagId} = nt.${DatabaseConstants.noteTagTagId}
+        LEFT JOIN ${DatabaseConstants.todoTagsTable} tt ON t.${DatabaseConstants.tagId} = tt.${DatabaseConstants.todoTagTagId}
         GROUP BY t.${DatabaseConstants.tagId}
         ORDER BY usage_count DESC, t.${DatabaseConstants.tagName} ASC
         LIMIT ?
@@ -221,5 +211,56 @@ class LocalTagRepository implements TagRepository {
     } catch (e) {
       throw app_exceptions.DatabaseException('Failed to get popular tags: $e');
     }
+  }
+
+  @override
+  Future<List<Tag>> getTagsDueForSync() async {
+    try {
+      final db = await _databaseHelper.database;
+      final maps = await db.query(
+        DatabaseConstants.tagsTable,
+        orderBy: '${DatabaseConstants.tagCreatedAt} ASC',
+      );
+
+      return maps.map((map) {
+        final tagModel = TagModel.fromJson(map);
+        return tagModel.toEntity();
+      }).toList();
+    } catch (e) {
+      throw app_exceptions.DatabaseException('Failed to get tags due for sync: $e');
+    }
+  }
+
+  @override
+  Future<int> getTodoCountByTag(String tagId) async {
+    try {
+      final db = await _databaseHelper.database;
+      final result = await db.rawQuery(
+        '''
+        SELECT COUNT(*) as count
+        FROM ${DatabaseConstants.todoTagsTable}
+        WHERE ${DatabaseConstants.todoTagTagId} = ?
+      ''',
+        [tagId],
+      );
+
+      return result.first['count'] as int;
+    } catch (e) {
+      throw app_exceptions.DatabaseException('Failed to get todo count by tag: $e');
+    }
+  }
+
+  @override
+  Future<bool> isTagInUse(String tagId) async {
+    try {
+      final count = await getTodoCountByTag(tagId);
+      return count > 0;
+    } catch (e) {
+      throw app_exceptions.DatabaseException('Failed to check if tag is in use: $e');
+    }
+  }
+
+  void dispose() {
+    _tagsStreamController.close();
   }
 }

@@ -1,6 +1,8 @@
-class Attachment {
+import 'package:equatable/equatable.dart';
+
+class Attachment extends Equatable {
   final String id;
-  final String noteId;
+  final String todoId;
   final String fileName;
   final String filePath;
   final String? mimeType;
@@ -9,7 +11,7 @@ class Attachment {
 
   const Attachment({
     required this.id,
-    required this.noteId,
+    required this.todoId,
     required this.fileName,
     required this.filePath,
     this.mimeType,
@@ -17,29 +19,34 @@ class Attachment {
     required this.createdAt,
   });
 
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is Attachment &&
-        other.id == id &&
-        other.noteId == noteId &&
-        other.fileName == fileName &&
-        other.filePath == filePath &&
-        other.mimeType == mimeType &&
-        other.fileSize == fileSize &&
-        other.createdAt == createdAt;
+  Attachment copyWith({
+    String? id,
+    String? todoId,
+    String? fileName,
+    String? filePath,
+    String? mimeType,
+    int? fileSize,
+    DateTime? createdAt,
+  }) {
+    return Attachment(
+      id: id ?? this.id,
+      todoId: todoId ?? this.todoId,
+      fileName: fileName ?? this.fileName,
+      filePath: filePath ?? this.filePath,
+      mimeType: mimeType ?? this.mimeType,
+      fileSize: fileSize ?? this.fileSize,
+      createdAt: createdAt ?? this.createdAt,
+    );
   }
 
   @override
-  int get hashCode {
-    return Object.hash(
-      id,
-      noteId,
-      fileName,
-      filePath,
-      mimeType,
-      fileSize,
-      createdAt,
-    );
-  }
+  List<Object?> get props => [
+        id,
+        todoId,
+        fileName,
+        filePath,
+        mimeType,
+        fileSize,
+        createdAt,
+      ];
 }

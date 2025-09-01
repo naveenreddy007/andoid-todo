@@ -1,10 +1,12 @@
+import 'package:equatable/equatable.dart';
+
 enum ConflictStatus {
   none,
   detected,
   resolved,
 }
 
-class SyncMetadata {
+class SyncMetadata extends Equatable {
   final String id;
   final String entityType;
   final String entityId;
@@ -23,29 +25,34 @@ class SyncMetadata {
     required this.conflictStatus,
   });
 
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is SyncMetadata &&
-        other.id == id &&
-        other.entityType == entityType &&
-        other.entityId == entityId &&
-        other.localHash == localHash &&
-        other.cloudHash == cloudHash &&
-        other.lastSync == lastSync &&
-        other.conflictStatus == conflictStatus;
+  SyncMetadata copyWith({
+    String? id,
+    String? entityType,
+    String? entityId,
+    String? localHash,
+    String? cloudHash,
+    DateTime? lastSync,
+    ConflictStatus? conflictStatus,
+  }) {
+    return SyncMetadata(
+      id: id ?? this.id,
+      entityType: entityType ?? this.entityType,
+      entityId: entityId ?? this.entityId,
+      localHash: localHash ?? this.localHash,
+      cloudHash: cloudHash ?? this.cloudHash,
+      lastSync: lastSync ?? this.lastSync,
+      conflictStatus: conflictStatus ?? this.conflictStatus,
+    );
   }
 
   @override
-  int get hashCode {
-    return Object.hash(
-      id,
-      entityType,
-      entityId,
-      localHash,
-      cloudHash,
-      lastSync,
-      conflictStatus,
-    );
-  }
+  List<Object?> get props => [
+        id,
+        entityType,
+        entityId,
+        localHash,
+        cloudHash,
+        lastSync,
+        conflictStatus,
+      ];
 }

@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repositories/local_category_repository.dart';
 import '../domain/entities/category.dart';
 import '../domain/repositories/category_repository.dart';
-import 'note_provider.dart';
+import 'todo_provider.dart';
 
 // Category repository provider
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
@@ -14,6 +14,18 @@ final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
   final repository = ref.watch(categoryRepositoryProvider);
   return repository.getAllCategories();
+});
+
+// Categories stream provider
+final categoriesStreamProvider = StreamProvider<List<Category>>((ref) {
+  final repository = ref.watch(categoryRepositoryProvider);
+  return repository.watchCategories();
+});
+
+// Todo count by category provider
+final todoCountByCategoryProvider = FutureProvider.family<int, String>((ref, categoryId) async {
+  final repository = ref.watch(categoryRepositoryProvider);
+  return repository.getTodoCountByCategory(categoryId);
 });
 
 // Individual category provider

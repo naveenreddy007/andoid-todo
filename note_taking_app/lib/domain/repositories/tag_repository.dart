@@ -8,8 +8,11 @@ abstract class TagRepository {
   Future<void> updateTag(Tag tag);
   Future<void> deleteTag(String id);
   Stream<List<Tag>> watchTags();
-  Future<List<Tag>> getTagsForNote(String noteId);
-  Future<void> addTagToNote(String noteId, String tagId);
-  Future<void> removeTagFromNote(String noteId, String tagId);
+  Future<List<Tag>> getTagsForTodo(String todoId);
+  Future<void> addTagToTodo(String todoId, String tagId);
+  Future<void> removeTagFromTodo(String todoId, String tagId);
   Future<List<Tag>> getPopularTags(int limit);
+  Future<int> getTodoCountByTag(String tagId);
+  Future<bool> isTagInUse(String tagId);
+  Future<List<Tag>> getTagsDueForSync();
 }
