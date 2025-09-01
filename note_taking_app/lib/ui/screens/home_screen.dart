@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../core/constants/app_constants.dart';
+import '../../domain/entities/note.dart';
 import '../../providers/note_provider.dart';
 import '../widgets/note_card.dart';
 import '../widgets/empty_state.dart';
 import 'note_editor_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
+import 'archived_notes_screen.dart';
+import 'categories_screen.dart';
+import 'tags_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -180,7 +184,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             title: const Text('Archived'),
             onTap: () {
               Navigator.pop(context);
-              // TODO: Navigate to archived notes
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ArchivedNotesScreen(),
+                ),
+              );
             },
           ),
           ListTile(
@@ -188,7 +197,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             title: const Text('Categories'),
             onTap: () {
               Navigator.pop(context);
-              // TODO: Navigate to categories management
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CategoriesScreen(),
+                ),
+              );
             },
           ),
           ListTile(
@@ -196,7 +210,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             title: const Text('Tags'),
             onTap: () {
               Navigator.pop(context);
-              // TODO: Navigate to tags management
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TagsScreen()),
+              );
             },
           ),
           const Divider(),
@@ -216,7 +233,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildNotesList(List<dynamic> notes) {
+  Widget _buildNotesList(List<Note> notes) {
     return RefreshIndicator(
       onRefresh: () async {
         final _ = ref.refresh(notesProvider);

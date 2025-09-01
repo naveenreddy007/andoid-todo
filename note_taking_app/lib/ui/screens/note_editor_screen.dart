@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:flutter_quill/flutter_quill.dart';
 import '../../domain/entities/note.dart';
 import '../../providers/note_provider.dart';
 import '../../core/utils/id_generator.dart';
@@ -17,7 +18,7 @@ class NoteEditorScreen extends ConsumerStatefulWidget {
 
 class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _contentController = TextEditingController();
+  late QuillController _contentController;
 
   bool _isEditing = false;
   Priority _selectedPriority = Priority.medium;
@@ -26,6 +27,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   @override
   void initState() {
     super.initState();
+    _contentController = QuillController.basic();
     _initializeEditor();
   }
 
@@ -37,7 +39,23 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       _isEditing = true;
 
       // Set the HTML content
-      _contentController.text = widget.note!.content;
+      if (widget.note!.content.isNotEmpty) {
+        try {
+          final doc = Document.fromJson(jsonDecode(widget.note!.content));
+          _contentController = QuillController(
+            document: doc,
+            selection: const TextSelection.collapsed(offset: 0),
+          );
+        } catch (e) {
+          final doc = Document()..insert(0, widget.note!.content);
+          _contentController = QuillController(
+            document: doc,
+            selection: const TextSelection.collapsed(offset: 0),
+          );
+        }
+      } else {
+        _contentController = QuillController.basic();
+      }
     }
   }
 
@@ -128,17 +146,26 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
             ),
           ),
           const Divider(height: 1),
+          QuillToolbar.simple(
+            configurations: QuillSimpleToolbarConfigurations(
+              controller: _contentController,
+              sharedConfigurations: const QuillSharedConfigurations(
+                locale: Locale('en'),
+              ),
+            ),
+          ),
+          const Divider(height: 1),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: TextField(
-                controller: _contentController,
-                decoration: const InputDecoration(
-                  hintText: 'Start writing your note...',
-                  border: InputBorder.none,
+              child: QuillEditor.basic(
+                configurations: QuillEditorConfigurations(
+                  controller: _contentController,
+                  readOnly: false,
+                  sharedConfigurations: const QuillSharedConfigurations(
+                    locale: Locale('en'),
+                  ),
                 ),
-                maxLines: null,
-                expands: true,
               ),
             ),
           ),
@@ -225,10 +252,10 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   void _saveNote() async {
     final title = _titleController.text.trim();
-    final content = _contentController.text.trim();
-    final plainText = content; // For search
+    final content = jsonEncode(_contentController.document.toDelta().toJson());
+    final plainText = _contentController.document.toPlainText();
 
-    if (title.isEmpty && content.isEmpty) {
+    if (title.isEmpty && plainText.trim().isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Note cannot be empty')));
@@ -240,7 +267,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       id: widget.note?.id ?? IdGenerator.generateId(),
       title: title,
       content: content,
-      plainText: plainText.replaceAll(RegExp(r'<[^>]*>'), ''), // Strip HTML
+      plainText: plainText, // For search
       createdAt: widget.note?.createdAt ?? now,
       updatedAt: now,
       reminderDate: _reminderDate,

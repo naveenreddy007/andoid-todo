@@ -7,6 +7,26 @@ class DatabaseConstants {
   static const String attachmentsTable = 'attachments';
   static const String syncMetadataTable = 'sync_metadata';
   static const String notesFtsTable = 'notes_fts';
+  static const String notesSearchTable = 'notes_search';
+
+  // FTS Triggers
+  static const String notesSearchInsertTrigger = 'notes_insert_trigger';
+  static const String notesSearchUpdateTrigger = 'notes_update_trigger';
+  static const String notesSearchDeleteTrigger = 'notes_delete_trigger';
+
+  // Indexes
+  static const String idxNotesPriority =
+      'CREATE INDEX idx_notes_priority ON $notesTable($notePriority)';
+  static const String idxNotesIsArchived =
+      'CREATE INDEX idx_notes_is_archived ON $notesTable($noteIsArchived)';
+  static const String idxNotesIsDeleted =
+      'CREATE INDEX idx_notes_is_deleted ON $notesTable($noteIsDeleted)';
+  static const String idxNotesSearchTitle =
+      'CREATE INDEX idx_notes_search_title ON $notesSearchTable($noteTitle)';
+  static const String idxNotesSearchContent =
+      'CREATE INDEX idx_notes_search_content ON $notesSearchTable($noteContent)';
+  static const String idxNotesSearchNoteId =
+      'CREATE INDEX idx_notes_search_note_id ON $notesSearchTable($noteId)';
 
   // Note columns
   static const String noteId = 'id';
