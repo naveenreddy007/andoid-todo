@@ -1,44 +1,33 @@
 import 'dart:math';
-import 'package:uuid/uuid.dart';
-import 'dart:convert';
 
 class IdGenerator {
-  static const Uuid _uuid = Uuid();
+  static const String _chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  static final Random _random = Random();
 
-  /// Generate a unique UUID v4
-  static String generateId() {
-    return _uuid.v4();
+  /// Generates a random ID with the specified length
+  static String generateId([int length = 16]) {
+    return String.fromCharCodes(
+      Iterable.generate(
+        length,
+        (_) => _chars.codeUnitAt(_random.nextInt(_chars.length)),
+      ),
+    );
   }
 
-  /// Generate a short ID (8 characters)
+  /// Generates a UUID-like ID
+  static String generateUuid() {
+    final timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+    final randomPart = generateId(8);
+    return '$timestamp-$randomPart';
+  }
+
+  /// Generates a short ID (8 characters)
   static String generateShortId() {
-    const chars =
-        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    final random = Random();
-    return List.generate(
-      8,
-      (index) => chars[random.nextInt(chars.length)],
-    ).join();
-  }
-}
-
-class HashUtils {
-  /// Generate simple hash of a string (for basic sync comparison)
-  static String generateSimpleHash(String input) {
-    var hash = 0;
-    for (int i = 0; i < input.length; i++) {
-      hash = ((hash << 5) - hash + input.codeUnitAt(i)) & 0x7fffffff;
-    }
-    return hash.toString();
+    return generateId(8);
   }
 
-  /// Generate hash for note content for sync comparison
-  static String generateNoteHash(
-    String title,
-    String content,
-    String updatedAt,
-  ) {
-    final combined = '$title|$content|$updatedAt';
-    return generateSimpleHash(combined);
+  /// Generates a long ID (32 characters)
+  static String generateLongId() {
+    return generateId(32);
   }
 }

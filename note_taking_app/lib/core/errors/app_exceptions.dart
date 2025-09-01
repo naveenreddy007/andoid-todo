@@ -14,60 +14,50 @@ abstract class AppException implements Exception {
 
 /// Database-related exceptions
 class DatabaseException extends AppException {
-  const DatabaseException(String message, {String? code, dynamic details})
-      : super(message, code: code, details: details);
+  const DatabaseException(super.message, {super.code, super.details});
 }
 
 /// Network-related exceptions
 class NetworkException extends AppException {
-  const NetworkException(String message, {String? code, dynamic details})
-      : super(message, code: code, details: details);
+  const NetworkException(super.message, {super.code, super.details});
 }
 
 /// Google Drive API related exceptions
 class GoogleDriveException extends AppException {
-  const GoogleDriveException(String message, {String? code, dynamic details})
-      : super(message, code: code, details: details);
+  const GoogleDriveException(super.message, {super.code, super.details});
 }
 
 /// Authentication exceptions
 class AuthException extends AppException {
-  const AuthException(String message, {String? code, dynamic details})
-      : super(message, code: code, details: details);
+  const AuthException(super.message, {super.code, super.details});
 }
 
 /// Sync-related exceptions
 class SyncException extends AppException {
-  const SyncException(String message, {String? code, dynamic details})
-      : super(message, code: code, details: details);
+  const SyncException(super.message, {super.code, super.details});
 }
 
 /// File operation exceptions
 class FileException extends AppException {
-  const FileException(String message, {String? code, dynamic details})
-      : super(message, code: code, details: details);
+  const FileException(super.message, {super.code, super.details});
 }
 
 /// Validation exceptions
 class ValidationException extends AppException {
-  const ValidationException(String message, {String? code, dynamic details})
-      : super(message, code: code, details: details);
+  const ValidationException(super.message, {super.code, super.details});
 }
 
 /// Permission exceptions
 class PermissionException extends AppException {
-  const PermissionException(String message, {String? code, dynamic details})
-      : super(message, code: code, details: details);
+  const PermissionException(super.message, {super.code, super.details});
 }
 
 /// Notification exceptions
 class NotificationException extends AppException {
-  const NotificationException(String message, {String? code, dynamic details})
-      : super(message, code: code, details: details);
+  const NotificationException(super.message, {super.code, super.details});
 }
 
 /// Cache exceptions
 class CacheException extends AppException {
-  const CacheException(String message, {String? code, dynamic details})
-      : super(message, code: code, details: details);
+  const CacheException(super.message, {super.code, super.details});
 }

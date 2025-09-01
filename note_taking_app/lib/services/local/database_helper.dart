@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async';
-import 'dart:io';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
+import 'dart:io';
 
 class DatabaseHelper {
   static DatabaseHelper? _instance;
@@ -15,7 +17,7 @@ class DatabaseHelper {
   }
 
   static const String _dbName = 'note_taking_app.db';
-  static const int _dbVersion = 1;
+  static const int _dbVersion = 2;
 
   Future<Database> get database async {
     _database ??= await _initDatabase();
@@ -23,6 +25,20 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
+    if (kIsWeb) {
+      return await openDatabase(
+        inMemoryDatabasePath,
+        version: _dbVersion,
+        onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
+        onConfigure: _onConfigure,
+      );
+    }
+
+    if (Platform.isAndroid) {
+      await applyWorkaroundToOpenSqlite3OnOldAndroidVersions();
+    }
+
     String path = join(await getDatabasesPath(), _dbName);
     return await openDatabase(
       path,
@@ -138,23 +154,40 @@ class DatabaseHelper {
       )
     ''');
 
-    // Full-text search virtual table
+    // Search table (replacing FTS5 for compatibility)
     await db.execute('''
-      CREATE VIRTUAL TABLE notes_fts USING fts5(
-        title, plain_text, content='notes', content_rowid='ROWID'
+      CREATE TABLE notes_search (
+        id INTEGER PRIMARY KEY,
+        note_id TEXT NOT NULL,
+        title TEXT,
+        plain_text TEXT,
+        FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE CASCADE
       )
     ''');
   }
 
   Future<void> _createIndexes(Database db) async {
     await db.execute('CREATE INDEX idx_notes_updated_at ON notes(updated_at)');
-    await db.execute('CREATE INDEX idx_notes_reminder_date ON notes(reminder_date)');
+    await db.execute(
+      'CREATE INDEX idx_notes_reminder_date ON notes(reminder_date)',
+    );
     await db.execute('CREATE INDEX idx_notes_category ON notes(category_id)');
-    await db.execute('CREATE INDEX idx_notes_sync_status ON notes(sync_status)');
-    await db.execute('CREATE INDEX idx_sync_metadata_entity ON sync_metadata(entity_type, entity_id)');
+    await db.execute(
+      'CREATE INDEX idx_notes_sync_status ON notes(sync_status)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_sync_metadata_entity ON sync_metadata(entity_type, entity_id)',
+    );
     await db.execute('CREATE INDEX idx_notes_priority ON notes(priority)');
-    await db.execute('CREATE INDEX idx_notes_is_archived ON notes(is_archived)');
+    await db.execute(
+      'CREATE INDEX idx_notes_is_archived ON notes(is_archived)',
+    );
     await db.execute('CREATE INDEX idx_notes_is_deleted ON notes(is_deleted)');
+    
+    // Search table indexes
+    await db.execute('CREATE INDEX idx_notes_search_title ON notes_search(title)');
+    await db.execute('CREATE INDEX idx_notes_search_content ON notes_search(plain_text)');
+    await db.execute('CREATE INDEX idx_notes_search_note_id ON notes_search(note_id)');
   }
 
   Future<void> _insertDefaultData(Database db) async {
@@ -200,7 +233,7 @@ class DatabaseHelper {
   }
 
   Future<void> _dropTables(Database db) async {
-    await db.execute('DROP TABLE IF EXISTS notes_fts');
+    await db.execute('DROP TABLE IF EXISTS notes_search');
     await db.execute('DROP TABLE IF EXISTS sync_metadata');
     await db.execute('DROP TABLE IF EXISTS attachments');
     await db.execute('DROP TABLE IF EXISTS note_tags');
@@ -209,28 +242,28 @@ class DatabaseHelper {
     await db.execute('DROP TABLE IF EXISTS categories');
   }
 
-  // FTS trigger management
+  // Search trigger management
   Future<void> _createFtsTriggers(Database db) async {
     // Insert trigger
     await db.execute('''
-      CREATE TRIGGER notes_fts_insert AFTER INSERT ON notes BEGIN
-        INSERT INTO notes_fts(rowid, title, plain_text) 
-        VALUES (new.rowid, new.title, new.plain_text);
+      CREATE TRIGGER notes_search_insert AFTER INSERT ON notes BEGIN
+        INSERT INTO notes_search(note_id, title, plain_text) 
+        VALUES (new.id, new.title, new.plain_text);
       END
     ''');
 
     // Update trigger
     await db.execute('''
-      CREATE TRIGGER notes_fts_update AFTER UPDATE ON notes BEGIN
-        UPDATE notes_fts SET title = new.title, plain_text = new.plain_text 
-        WHERE rowid = old.rowid;
+      CREATE TRIGGER notes_search_update AFTER UPDATE ON notes BEGIN
+        UPDATE notes_search SET title = new.title, plain_text = new.plain_text 
+        WHERE note_id = old.id;
       END
     ''');
 
     // Delete trigger
     await db.execute('''
-      CREATE TRIGGER notes_fts_delete AFTER DELETE ON notes BEGIN
-        DELETE FROM notes_fts WHERE rowid = old.rowid;
+      CREATE TRIGGER notes_search_delete AFTER DELETE ON notes BEGIN
+        DELETE FROM notes_search WHERE note_id = old.id;
       END
     ''');
   }
@@ -325,15 +358,21 @@ class DatabaseHelper {
     return await batch.commit();
   }
 
-  // Full-text search
+  // Search functionality using LIKE queries
   Future<List<Map<String, dynamic>>> searchNotes(String query) async {
     final db = await database;
-    return await db.rawQuery('''
-      SELECT notes.* FROM notes
-      INNER JOIN notes_fts ON notes.rowid = notes_fts.rowid
-      WHERE notes_fts MATCH ? AND notes.is_deleted = 0
-      ORDER BY rank
-    ''', [query]);
+    final searchTerm = '%$query%';
+    return await db.rawQuery(
+      '''
+      SELECT DISTINCT notes.* FROM notes
+      LEFT JOIN notes_search ON notes.id = notes_search.note_id
+      WHERE (notes.title LIKE ? OR notes.plain_text LIKE ? OR 
+             notes_search.title LIKE ? OR notes_search.plain_text LIKE ?)
+      AND notes.is_deleted = 0
+      ORDER BY notes.updated_at DESC
+    ''',
+      [searchTerm, searchTerm, searchTerm, searchTerm],
+    );
   }
 
   // Close database
@@ -354,9 +393,9 @@ class DatabaseHelper {
     await db.delete('sync_metadata');
     await db.delete('attachments');
     await db.delete('note_tags');
+    await db.delete('notes_search');
     await db.delete('notes');
     await db.delete('tags');
     await db.delete('categories');
-    await db.execute('DELETE FROM notes_fts');
   }
 }

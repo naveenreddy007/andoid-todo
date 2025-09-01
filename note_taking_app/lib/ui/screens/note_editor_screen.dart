@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import 'package:quill_html_editor/quill_html_editor.dart';
 import '../../domain/entities/note.dart';
 import '../../providers/note_provider.dart';
 import '../../core/utils/id_generator.dart';
@@ -18,7 +17,7 @@ class NoteEditorScreen extends ConsumerStatefulWidget {
 
 class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   final TextEditingController _titleController = TextEditingController();
-  final QuillEditorController _contentController = QuillEditorController();
+  final TextEditingController _contentController = TextEditingController();
 
   bool _isEditing = false;
   Priority _selectedPriority = Priority.medium;
@@ -38,13 +37,14 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       _isEditing = true;
 
       // Set the HTML content
-      _contentController.setText(widget.note!.content);
+      _contentController.text = widget.note!.content;
     }
   }
 
   @override
   void dispose() {
     _titleController.dispose();
+    _contentController.dispose();
     super.dispose();
   }
 
@@ -131,21 +131,14 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: QuillHtmlEditor(
-                text: widget.note?.content ?? '',
-                hintText: 'Start writing your note...',
+              child: TextField(
                 controller: _contentController,
-                isEnabled: true,
-                minHeight: 300,
-                hintTextAlign: TextAlign.start,
-                padding: const EdgeInsets.all(12),
-                hintTextPadding: EdgeInsets.zero,
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                loadingBuilder: (context) {
-                  return const Center(
-                    child: CircularProgressIndicator.adaptive(),
-                  );
-                },
+                decoration: const InputDecoration(
+                  hintText: 'Start writing your note...',
+                  border: InputBorder.none,
+                ),
+                maxLines: null,
+                expands: true,
               ),
             ),
           ),
@@ -162,13 +155,13 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
 
-    if (date != null) {
+    if (date != null && mounted) {
       final TimeOfDay? time = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.fromDateTime(_reminderDate ?? DateTime.now()),
       );
 
-      if (time != null) {
+      if (time != null && mounted) {
         setState(() {
           _reminderDate = DateTime(
             date.year,
@@ -190,19 +183,15 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: Priority.values.map((priority) {
-            return RadioListTile<Priority>(
+            return ListTile(
               title: Text(priority.name.toUpperCase()),
-              value: priority,
-              groupValue: _selectedPriority,
-              onChanged: (Priority? value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedPriority = value;
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              secondary: Container(
+              leading: Icon(
+                _selectedPriority == priority 
+                  ? Icons.radio_button_checked 
+                  : Icons.radio_button_unchecked,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              trailing: Container(
                 width: 12,
                 height: 12,
                 decoration: BoxDecoration(
@@ -210,6 +199,12 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                   shape: BoxShape.circle,
                 ),
               ),
+              onTap: () {
+                setState(() {
+                  _selectedPriority = priority;
+                });
+                Navigator.pop(context);
+              },
             );
           }).toList(),
         ),
@@ -230,8 +225,8 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
 
   void _saveNote() async {
     final title = _titleController.text.trim();
-    final content = await _contentController.getText();
-    final plainText = await _contentController.getText(); // For search
+    final content = _contentController.text.trim();
+    final plainText = content; // For search
 
     if (title.isEmpty && content.isEmpty) {
       ScaffoldMessenger.of(
@@ -269,7 +264,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       }
 
       // Refresh the notes list
-      ref.refresh(notesProvider);
+      final _ = ref.refresh(notesProvider);
 
       if (mounted) {
         Navigator.pop(context);

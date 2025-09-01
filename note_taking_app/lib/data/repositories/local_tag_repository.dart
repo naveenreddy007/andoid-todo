@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:sqflite/sqflite.dart' hide DatabaseException;
 
 import '../../core/constants/database_constants.dart';
 import '../../core/errors/app_exceptions.dart' as app_exceptions;

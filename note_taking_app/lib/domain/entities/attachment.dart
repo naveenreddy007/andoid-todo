@@ -1,6 +1,4 @@
-import 'package:equatable/equatable.dart';
-
-class Attachment extends Equatable {
+class Attachment {
   final String id;
   final String noteId;
   final String fileName;
@@ -19,34 +17,29 @@ class Attachment extends Equatable {
     required this.createdAt,
   });
 
-  Attachment copyWith({
-    String? id,
-    String? noteId,
-    String? fileName,
-    String? filePath,
-    String? mimeType,
-    int? fileSize,
-    DateTime? createdAt,
-  }) {
-    return Attachment(
-      id: id ?? this.id,
-      noteId: noteId ?? this.noteId,
-      fileName: fileName ?? this.fileName,
-      filePath: filePath ?? this.filePath,
-      mimeType: mimeType ?? this.mimeType,
-      fileSize: fileSize ?? this.fileSize,
-      createdAt: createdAt ?? this.createdAt,
-    );
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is Attachment &&
+        other.id == id &&
+        other.noteId == noteId &&
+        other.fileName == fileName &&
+        other.filePath == filePath &&
+        other.mimeType == mimeType &&
+        other.fileSize == fileSize &&
+        other.createdAt == createdAt;
   }
 
   @override
-  List<Object?> get props => [
-        id,
-        noteId,
-        fileName,
-        filePath,
-        mimeType,
-        fileSize,
-        createdAt,
-      ];
+  int get hashCode {
+    return Object.hash(
+      id,
+      noteId,
+      fileName,
+      filePath,
+      mimeType,
+      fileSize,
+      createdAt,
+    );
+  }
 }

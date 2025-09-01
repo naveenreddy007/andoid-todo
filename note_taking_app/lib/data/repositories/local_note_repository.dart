@@ -4,7 +4,6 @@ import 'package:sqflite/sqflite.dart' hide DatabaseException;
 
 import '../../core/constants/database_constants.dart';
 import '../../core/errors/app_exceptions.dart' as app_exceptions;
-import '../../core/utils/date_time_utils.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/repositories/note_repository.dart';
 import '../../services/local/database_helper.dart';

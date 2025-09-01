@@ -1,4 +1,4 @@
-import '../domain/entities/sync_metadata.dart';
+import '../../domain/entities/sync_metadata.dart';
 
 class SyncMetadataModel {
   final String id;

@@ -219,7 +219,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildNotesList(List<dynamic> notes) {
     return RefreshIndicator(
       onRefresh: () async {
-        ref.refresh(notesProvider);
+        final _ = ref.refresh(notesProvider);
       },
       child: ListView.builder(
         padding: const EdgeInsets.all(16),

@@ -1,4 +1,4 @@
-import '../domain/entities/attachment.dart';
+import '../../domain/entities/attachment.dart';
 
 class AttachmentModel {
   final String id;

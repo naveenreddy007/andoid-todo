@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'package:material_symbols_icons/symbols.dart';
 
 class EmptyState extends StatelessWidget {
   final IconData icon;
@@ -46,24 +45,24 @@ class EmptyState extends StatelessWidget {
                       end: Alignment.bottomRight,
                       colors: isDark
                           ? [
-                              Colors.white.withOpacity(0.06),
-                              Colors.white.withOpacity(0.03),
+                              Colors.white.withValues(alpha: 0.06),
+                              Colors.white.withValues(alpha: 0.03),
                             ]
                           : [
-                              Colors.white.withOpacity(0.55),
-                              Colors.white.withOpacity(0.35),
+                              Colors.white.withValues(alpha: 0.55),
+                              Colors.white.withValues(alpha: 0.35),
                             ],
                     ),
                     border: Border.all(
                       color: isDark
-                          ? Colors.white.withOpacity(0.10)
-                          : Colors.white.withOpacity(0.40),
+                          ? Colors.white.withValues(alpha: 0.10)
+                          : Colors.white.withValues(alpha: 0.40),
                     ),
                     boxShadow: [
                       BoxShadow(
                         color: isDark
-                            ? Colors.black.withOpacity(0.35)
-                            : Colors.grey.shade300.withOpacity(0.7),
+                            ? Colors.black.withValues(alpha: 0.35)
+                            : Colors.grey.shade300.withValues(alpha: 0.7),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       )
@@ -79,7 +78,7 @@ class EmptyState extends StatelessWidget {
                         Icon(
                           icon,
                           size: 80,
-                          color: theme.colorScheme.primary.withOpacity(0.9),
+                          color: theme.colorScheme.primary.withValues(alpha: 0.9),
                         ),
                         const SizedBox(height: 16),
                         AnimatedOpacity(
@@ -90,8 +89,8 @@ class EmptyState extends StatelessWidget {
                             style: theme.textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.w700,
                               color: isDark
-                                  ? Colors.white.withOpacity(0.95)
-                                  : Colors.black.withOpacity(0.88),
+                                  ? Colors.white.withValues(alpha: 0.95)
+                                  : Colors.black.withValues(alpha: 0.88),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -102,8 +101,8 @@ class EmptyState extends StatelessWidget {
                           style: theme.textTheme.bodyLarge?.copyWith(
                             height: 1.35,
                             color: isDark
-                                ? Colors.white.withOpacity(0.80)
-                                : Colors.black.withOpacity(0.72),
+                                ? Colors.white.withValues(alpha: 0.80)
+                                : Colors.black.withValues(alpha: 0.72),
                           ),
                           textAlign: TextAlign.center,
                         ),

@@ -44,25 +44,25 @@ class NoteCard extends StatelessWidget {
                 end: Alignment.bottomRight,
                 colors: isDark
                     ? [
-                        Colors.white.withOpacity(0.06),
-                        Colors.white.withOpacity(0.03),
+                        Colors.white.withValues(alpha: 0.06),
+                        Colors.white.withValues(alpha: 0.03),
                       ]
                     : [
-                        Colors.white.withOpacity(0.55),
-                        Colors.white.withOpacity(0.35),
+                        Colors.white.withValues(alpha: 0.55),
+                        Colors.white.withValues(alpha: 0.35),
                       ],
               ),
               border: Border.all(
                 color: isDark
-                    ? Colors.white.withOpacity(0.10)
-                    : Colors.white.withOpacity(0.40),
+                    ? Colors.white.withValues(alpha: 0.10)
+                    : Colors.white.withValues(alpha: 0.40),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
                   color: isDark
-                      ? Colors.black.withOpacity(0.35)
-                      : Colors.grey.shade300.withOpacity(0.7),
+                      ? Colors.black.withValues(alpha: 0.35)
+                      : Colors.grey.shade300.withValues(alpha: 0.7),
                   blurRadius: 18,
                   spreadRadius: 0,
                   offset: const Offset(0, 8),
@@ -75,8 +75,8 @@ class NoteCard extends StatelessWidget {
               child: InkWell(
                 onTap: onTap,
                 borderRadius: borderRadius,
-                splashColor: theme.colorScheme.primary.withOpacity(0.08),
-                highlightColor: theme.colorScheme.primary.withOpacity(0.04),
+                splashColor: theme.colorScheme.primary.withValues(alpha: 0.08),
+                highlightColor: theme.colorScheme.primary.withValues(alpha: 0.04),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -91,8 +91,8 @@ class NoteCard extends StatelessWidget {
                                 fontWeight: FontWeight.w700,
                                 // Ensure strong contrast over translucent bg
                                 color: isDark
-                                    ? Colors.white.withOpacity(0.95)
-                                    : Colors.black.withOpacity(0.85),
+                                    ? Colors.white.withValues(alpha: 0.95)
+                                    : Colors.black.withValues(alpha: 0.85),
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -112,8 +112,8 @@ class NoteCard extends StatelessWidget {
                             style: theme.textTheme.bodyMedium?.copyWith(
                               height: 1.35,
                               color: isDark
-                                  ? Colors.white.withOpacity(0.82)
-                                  : Colors.black.withOpacity(0.70),
+                                  ? Colors.white.withValues(alpha: 0.82)
+                                  : Colors.black.withValues(alpha: 0.70),
                             ),
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
@@ -127,14 +127,14 @@ class NoteCard extends StatelessWidget {
                             Symbols.schedule,
                             size: 16,
                             color: theme.colorScheme.onSurfaceVariant
-                                .withOpacity(isDark ? 0.8 : 0.7),
+                                .withValues(alpha: isDark ? 0.8 : 0.7),
                           ),
                           const SizedBox(width: 4),
                           Text(
                             DateTimeUtils.getRelativeTime(note.updatedAt),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant
-                                  .withOpacity(isDark ? 0.85 : 0.75),
+                                  .withValues(alpha: isDark ? 0.85 : 0.75),
                             ),
                           ),
                           if (note.reminderDate != null) ...[
@@ -151,7 +151,7 @@ class NoteCard extends StatelessWidget {
                               Symbols.attach_file,
                               size: 16,
                               color: theme.colorScheme.onSurfaceVariant
-                                  .withOpacity(isDark ? 0.85 : 0.75),
+                                  .withValues(alpha: isDark ? 0.85 : 0.75),
                             ),
                           ],
                           const Spacer(),
@@ -160,7 +160,7 @@ class NoteCard extends StatelessWidget {
                               Symbols.archive,
                               size: 16,
                               color: theme.colorScheme.onSurfaceVariant
-                                  .withOpacity(isDark ? 0.85 : 0.75),
+                                  .withValues(alpha: isDark ? 0.85 : 0.75),
                             ),
                         ],
                       ),
@@ -177,15 +177,15 @@ class NoteCard extends StatelessWidget {
                                   end: Alignment.bottomRight,
                                   colors: [
                                     theme.colorScheme.primary
-                                        .withOpacity(isDark ? 0.24 : 0.18),
+                                        .withValues(alpha: isDark ? 0.24 : 0.18),
                                     theme.colorScheme.primaryContainer
-                                        .withOpacity(isDark ? 0.22 : 0.16),
+                                        .withValues(alpha: isDark ? 0.22 : 0.16),
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: theme.colorScheme.onPrimaryContainer
-                                      .withOpacity(0.20),
+                                      .withValues(alpha: 0.20),
                                 ),
                               ),
                               child: Padding(
@@ -198,8 +198,8 @@ class NoteCard extends StatelessWidget {
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     color: isDark
-                                        ? Colors.white.withOpacity(0.95)
-                                        : Colors.black.withOpacity(0.85),
+                                        ? Colors.white.withValues(alpha: 0.95)
+                                        : Colors.black.withValues(alpha: 0.85),
                                   ),
                                 ),
                               ),

@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repositories/local_category_repository.dart';
 import '../domain/entities/category.dart';
 import '../domain/repositories/category_repository.dart';
-import '../services/local/database_helper.dart';
 import 'note_provider.dart';
 
 // Category repository provider
