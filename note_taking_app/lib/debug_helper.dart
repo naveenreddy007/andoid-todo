@@ -101,10 +101,14 @@ class DebugHelper {
   static Future<void> processAdbCommands() async {
     if (!kDebugMode) return;
     
+    debugPrint('🔄 Checking for ADB commands...');
+    
     try {
-      final directory = Directory('/sdcard');
+      final directory = Directory('/data/data/com.notetaking.app.note_taking_app/files');
       final commandFile = File('${directory.path}/adb_command.json');
       final responseFile = File('${directory.path}/adb_response.json');
+      
+      debugPrint('📁 Checking command file: ${commandFile.path}');
       
       if (await commandFile.exists()) {
         final commandJson = await commandFile.readAsString();

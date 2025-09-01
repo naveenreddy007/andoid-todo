@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 
 class EmptyState extends StatelessWidget {
   final IconData icon;
@@ -26,17 +25,7 @@ class EmptyState extends StatelessWidget {
         padding: const EdgeInsets.all(24),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
-          child: ClipRRect(
-            borderRadius: borderRadius,
-            child: Stack(
-              children: [
-                // Frosted glass blur
-                BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                  child: const SizedBox.expand(),
-                ),
-                // Translucent gradient and border
-                AnimatedContainer(
+          child: AnimatedContainer(
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeOutCubic,
                   decoration: BoxDecoration(
@@ -113,10 +102,6 @@ class EmptyState extends StatelessWidget {
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );

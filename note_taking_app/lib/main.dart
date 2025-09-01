@@ -5,6 +5,7 @@ import 'ui/screens/home_screen.dart';
 import 'ui/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'debug_helper.dart';
+import 'debug_database_dump.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,6 +13,9 @@ void main() async {
   // Insert test todos for debugging
   await DebugHelper.insertTestTodos();
   await DebugHelper.fetchAndPrintTodos();
+  
+  // Dump database contents for ADB verification
+  await DatabaseDumper.dumpTodosOnly();
   
   // Start ADB command processing timer
   Timer.periodic(const Duration(seconds: 2), (timer) {

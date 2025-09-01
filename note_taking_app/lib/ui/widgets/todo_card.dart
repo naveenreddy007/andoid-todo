@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../domain/entities/todo.dart';
@@ -31,17 +30,7 @@ class TodoCard extends StatelessWidget {
         todo.dueDate!.isBefore(DateTime.now()) && 
         !isCompleted;
 
-    return ClipRRect(
-      borderRadius: borderRadius,
-      child: Stack(
-        children: [
-          // Blur background
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-            child: const SizedBox.expand(),
-          ),
-          // Translucent gradient container with subtle border for glass effect
-          AnimatedContainer(
+    return AnimatedContainer(
             duration: const Duration(milliseconds: 240),
             curve: Curves.easeOutCubic,
             decoration: BoxDecoration(
@@ -296,10 +285,7 @@ class TodoCard extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    );
+          );
   }
 
   Widget _buildPriorityIndicator(BuildContext context) {

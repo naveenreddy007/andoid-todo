@@ -105,7 +105,7 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
         leading: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: Color(tag.color),
+            color: _parseColor(tag.color),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
@@ -214,11 +214,24 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
     }
   }
 
+  Color _parseColor(String colorString) {
+    try {
+      // Remove # if present and ensure it's 6 characters
+      String cleanColor = colorString.replaceAll('#', '');
+      if (cleanColor.length == 6) {
+        return Color(int.parse('FF$cleanColor', radix: 16));
+      }
+      return Colors.blue; // Default fallback
+    } catch (e) {
+      return Colors.blue; // Default fallback
+    }
+  }
+
   void _showTagDialog({Tag? tag}) {
     _editingTag = tag;
     if (tag != null) {
       _nameController.text = tag.name;
-      _selectedColor = Color(tag.color);
+      _selectedColor = _parseColor(tag.color);
     } else {
       _nameController.clear();
       _selectedColor = Colors.blue;
@@ -330,25 +343,22 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
     }
 
     try {
-      final tagOperations = ref.read(tagOperationsProvider);
-      
       if (_editingTag != null) {
         // Update existing tag
         final updatedTag = _editingTag!.copyWith(
           name: _nameController.text.trim(),
-          color: _selectedColor.value,
+          color: '#${_selectedColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
         );
-        await tagOperations.updateTag(updatedTag);
+        await ref.read(tagOperationsProvider.notifier).updateTag(updatedTag);
       } else {
         // Create new tag
         final newTag = Tag(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           name: _nameController.text.trim(),
-          color: _selectedColor.value,
+          color: '#${_selectedColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
           createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
         );
-        await tagOperations.createTag(newTag);
+        await ref.read(tagOperationsProvider.notifier).saveTag(newTag);
       }
 
       if (mounted) {
@@ -400,8 +410,7 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
 
   void _deleteTag(Tag tag) async {
     try {
-      final tagOperations = ref.read(tagOperationsProvider);
-      await tagOperations.deleteTag(tag.id);
+      await ref.read(tagOperationsProvider.notifier).deleteTag(tag.id);
       
       if (mounted) {
         Navigator.of(context).pop();

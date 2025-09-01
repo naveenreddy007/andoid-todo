@@ -36,116 +36,107 @@ function New-AdbTodo {
     $tempFile = [System.IO.Path]::GetTempFileName()
     $commandJson | Out-File -FilePath $tempFile -Encoding UTF8
     
-    adb push $tempFile "/sdcard/adb_command.json"
+    adb push $tempFile "/data/data/com.notetaking.app.note_taking_app/files/adb_command.json"
     Remove-Item $tempFile
     
     # Wait for response
     Start-Sleep -Seconds 3
     
-    # Get response
-    adb pull "/sdcard/adb_response.json" "$env:TEMP\adb_response.json" 2>$null
+    # Check for response file
+    $responseExists = adb shell "run-as com.notetaking.app.note_taking_app test -f files/adb_response.json && echo 'exists' || echo 'not found'"
     
-    if (Test-Path "$env:TEMP\adb_response.json") {
-        $response = Get-Content "$env:TEMP\adb_response.json" | ConvertFrom-Json
+    if ($responseExists.Trim() -eq "exists") {
+        $response = adb shell "run-as com.notetaking.app.note_taking_app cat files/adb_response.json"
+        adb shell "run-as com.notetaking.app.note_taking_app rm files/adb_response.json"
         
-        if ($response.success) {
-            Write-Host "Todo created successfully!" -ForegroundColor Green
-            Write-Host "ID: $($response.data.id)" -ForegroundColor Cyan
-            Write-Host "Title: $($response.data.title)" -ForegroundColor Cyan
-            Write-Host "Status: $($response.data.status)" -ForegroundColor Cyan
-            Write-Host "Priority: $($response.data.priority)" -ForegroundColor Cyan
+        $responseObj = $response | ConvertFrom-Json
+        if ($responseObj.success) {
+            Write-Host "✅ Todo created successfully: $($responseObj.data.title)"
         } else {
-            Write-Host "Error creating todo: $($response.error)" -ForegroundColor Red
+            Write-Host "❌ Error creating todo: $($responseObj.error)"
         }
-        
-        Remove-Item "$env:TEMP\adb_response.json"
     } else {
-        Write-Host "No response received from app" -ForegroundColor Yellow
+        Write-Host "No response received from app"
     }
 }
 
 function Get-AdbTodos {
-    $command = @{
+    # Create command file
+    $commandData = @{
         action = "get_todos"
         data = @{}
     }
     
-    $commandJson = $command | ConvertTo-Json -Depth 3
-    
-    Write-Host "Fetching todos..." -ForegroundColor Green
-    
-    # Write command to device
+    $commandJson = $commandData | ConvertTo-Json -Depth 3
     $tempFile = [System.IO.Path]::GetTempFileName()
     $commandJson | Out-File -FilePath $tempFile -Encoding UTF8
     
-    adb push $tempFile "/sdcard/adb_command.json"
+    Write-Host "Fetching todos..."
+    
+    # Push command file to device
+    adb push $tempFile /data/data/com.notetaking.app.note_taking_app/files/adb_command.json
     Remove-Item $tempFile
     
     # Wait for response
     Start-Sleep -Seconds 3
     
-    # Get response
-    adb pull "/sdcard/adb_response.json" "$env:TEMP\adb_response.json" 2>$null
+    # Check for response file
+    $responseExists = adb shell "run-as com.notetaking.app.note_taking_app test -f files/adb_response.json && echo 'exists' || echo 'not found'"
     
-    if (Test-Path "$env:TEMP\adb_response.json") {
-        $response = Get-Content "$env:TEMP\adb_response.json" | ConvertFrom-Json
+    if ($responseExists.Trim() -eq "exists") {
+        $response = adb shell "run-as com.notetaking.app.note_taking_app cat files/adb_response.json"
+        adb shell "run-as com.notetaking.app.note_taking_app rm files/adb_response.json"
         
-        if ($response.success) {
-            Write-Host "Found $($response.data.Count) todos:" -ForegroundColor Green
-            Write-Host ""
-            
-            foreach ($todo in $response.data) {
-                Write-Host "$($todo.title)" -ForegroundColor Cyan
-                Write-Host "   ID: $($todo.id)" -ForegroundColor Gray
-                Write-Host "   Description: $($todo.description)" -ForegroundColor Gray
-                Write-Host "   Status: $($todo.status)" -ForegroundColor Yellow
-                Write-Host "   Priority: $($todo.priority)" -ForegroundColor Magenta
-                Write-Host "   Created: $([DateTimeOffset]::FromUnixTimeMilliseconds($todo.created_at).ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor Gray
-                Write-Host ""
+        $responseObj = $response | ConvertFrom-Json
+        if ($responseObj.success) {
+            Write-Host "Found $($responseObj.data.Count) todos:" -ForegroundColor Green
+            foreach ($todo in $responseObj.data) {
+                Write-Host "  [$($todo.status)] $($todo.title) - $($todo.priority)" -ForegroundColor Cyan
+                if ($todo.description) {
+                    Write-Host "    Description: $($todo.description)" -ForegroundColor Gray
+                }
             }
         } else {
-            Write-Host "Error fetching todos: $($response.error)" -ForegroundColor Red
+            Write-Host "Error fetching todos: $($responseObj.error)" -ForegroundColor Red
         }
-        
-        Remove-Item "$env:TEMP\adb_response.json"
     } else {
         Write-Host "No response received from app" -ForegroundColor Yellow
     }
 }
 
 function Get-AdbTodoCount {
-    $command = @{
+    $commandData = @{
         action = "get_todo_count"
         data = @{}
     }
     
-    $commandJson = $command | ConvertTo-Json -Depth 3
+    $commandJson = $commandData | ConvertTo-Json -Depth 3
     
-    Write-Host "Getting todo count..." -ForegroundColor Green
+    Write-Host "Getting todo count..."
     
     # Write command to device
     $tempFile = [System.IO.Path]::GetTempFileName()
     $commandJson | Out-File -FilePath $tempFile -Encoding UTF8
     
-    adb push $tempFile "/sdcard/adb_command.json"
+    adb push $tempFile "/data/data/com.notetaking.app.note_taking_app/files/adb_command.json"
     Remove-Item $tempFile
     
     # Wait for response
     Start-Sleep -Seconds 3
     
-    # Get response
-    adb pull "/sdcard/adb_response.json" "$env:TEMP\adb_response.json" 2>$null
+    # Check for response file
+    $responseExists = adb shell "run-as com.notetaking.app.note_taking_app test -f files/adb_response.json && echo 'exists' || echo 'not found'"
     
-    if (Test-Path "$env:TEMP\adb_response.json") {
-        $response = Get-Content "$env:TEMP\adb_response.json" | ConvertFrom-Json
+    if ($responseExists.Trim() -eq "exists") {
+        $response = adb shell "run-as com.notetaking.app.note_taking_app cat files/adb_response.json"
+        adb shell "run-as com.notetaking.app.note_taking_app rm files/adb_response.json"
         
-        if ($response.success) {
-            Write-Host "Total todos: $($response.data.count)" -ForegroundColor Green
+        $responseObj = $response | ConvertFrom-Json
+        if ($responseObj.success) {
+            Write-Host "Total todos: $($responseObj.data.count)" -ForegroundColor Green
         } else {
-            Write-Host "Error getting todo count: $($response.error)" -ForegroundColor Red
+            Write-Host "Error getting todo count: $($responseObj.error)" -ForegroundColor Red
         }
-        
-        Remove-Item "$env:TEMP\adb_response.json"
     } else {
         Write-Host "No response received from app" -ForegroundColor Yellow
     }
@@ -154,44 +145,43 @@ function Get-AdbTodoCount {
 function Remove-AdbTodo {
     param(
         [Parameter(Mandatory=$true)]
-        [string]$TodoId
+        [string]$Id
     )
     
-    $command = @{
+    $commandData = @{
         action = "delete_todo"
         data = @{
-            id = $TodoId
+            id = $Id
         }
     }
     
-    $commandJson = $command | ConvertTo-Json -Depth 3
+    $commandJson = $commandData | ConvertTo-Json -Depth 3
     
-    Write-Host "Deleting todo: $TodoId" -ForegroundColor Green
+    Write-Host "Deleting todo with ID: $Id"
     
     # Write command to device
     $tempFile = [System.IO.Path]::GetTempFileName()
     $commandJson | Out-File -FilePath $tempFile -Encoding UTF8
     
-    adb push $tempFile "/sdcard/adb_command.json"
+    adb push $tempFile "/data/data/com.notetaking.app.note_taking_app/files/adb_command.json"
     Remove-Item $tempFile
     
     # Wait for response
     Start-Sleep -Seconds 3
     
-    # Get response
-    adb pull "/sdcard/adb_response.json" "$env:TEMP\adb_response.json" 2>$null
+    # Check for response file
+    $responseExists = adb shell "run-as com.notetaking.app.note_taking_app test -f files/adb_response.json && echo 'exists' || echo 'not found'"
     
-    if (Test-Path "$env:TEMP\adb_response.json") {
-        $response = Get-Content "$env:TEMP\adb_response.json" | ConvertFrom-Json
+    if ($responseExists.Trim() -eq "exists") {
+        $response = adb shell "run-as com.notetaking.app.note_taking_app cat files/adb_response.json"
+        adb shell "run-as com.notetaking.app.note_taking_app rm files/adb_response.json"
         
-        if ($response.success) {
+        $responseObj = $response | ConvertFrom-Json
+        if ($responseObj.success) {
             Write-Host "Todo deleted successfully!" -ForegroundColor Green
-            Write-Host "Deleted ID: $($response.data.deleted_id)" -ForegroundColor Cyan
         } else {
-            Write-Host "Error deleting todo: $($response.error)" -ForegroundColor Red
+            Write-Host "Error deleting todo: $($responseObj.error)" -ForegroundColor Red
         }
-        
-        Remove-Item "$env:TEMP\adb_response.json"
     } else {
         Write-Host "No response received from app" -ForegroundColor Yellow
     }

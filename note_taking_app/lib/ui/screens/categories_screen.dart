@@ -109,12 +109,12 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Color(category.color).withValues(alpha: 0.2),
+            color: _parseColor(category.color).withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
-            IconData(category.icon, fontFamily: 'MaterialSymbolsOutlined'),
-            color: Color(category.color),
+            IconData(int.parse(category.icon!), fontFamily: 'MaterialSymbolsOutlined'),
+            color: _parseColor(category.color),
           ),
         ),
         title: Text(
@@ -123,17 +123,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                 fontWeight: FontWeight.w600,
               ),
         ),
-        subtitle: category.description?.isNotEmpty == true
-            ? Text(
-                category.description!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
-                    ),
-              )
-            : null,
+        subtitle: null,
         trailing: PopupMenuButton<String>(
           icon: const Icon(Symbols.more_vert),
           onSelected: (value) {
@@ -208,12 +198,11 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     _editingCategory = category;
     if (category != null) {
       _nameController.text = category.name;
-      _descriptionController.text = category.description ?? '';
-      _selectedColor = Color(category.color);
-      _selectedIcon = IconData(category.icon, fontFamily: 'MaterialSymbolsOutlined');
+      _selectedColor = _parseColor(category.color);
+      _selectedIcon = IconData(int.parse(category.icon!), fontFamily: 'MaterialSymbolsOutlined');
     } else {
       _nameController.clear();
-      _descriptionController.clear();
+
       _selectedColor = Colors.blue;
       _selectedIcon = Symbols.folder;
     }
@@ -234,15 +223,7 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
                     border: OutlineInputBorder(),
                   ),
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _descriptionController,
-                  decoration: const InputDecoration(
-                    labelText: 'Description (optional)',
-                    border: OutlineInputBorder(),
-                  ),
-                  maxLines: 2,
-                ),
+
                 const SizedBox(height: 16),
                 Row(
                   children: [
@@ -404,33 +385,24 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     }
 
     try {
-      final categoryOperations = ref.read(categoryOperationsProvider);
-      
       if (_editingCategory != null) {
         // Update existing category
         final updatedCategory = _editingCategory!.copyWith(
           name: _nameController.text.trim(),
-          description: _descriptionController.text.trim().isEmpty 
-              ? null 
-              : _descriptionController.text.trim(),
-          color: _selectedColor.value,
-          icon: _selectedIcon.codePoint,
+          color: '#${_selectedColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+          icon: _selectedIcon.codePoint.toString(),
         );
-        await categoryOperations.updateCategory(updatedCategory);
+        await ref.read(categoryOperationsProvider.notifier).updateCategory(updatedCategory);
       } else {
         // Create new category
         final newCategory = Category(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
           name: _nameController.text.trim(),
-          description: _descriptionController.text.trim().isEmpty 
-              ? null 
-              : _descriptionController.text.trim(),
-          color: _selectedColor.value,
-          icon: _selectedIcon.codePoint,
+          color: '#${_selectedColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}',
+          icon: _selectedIcon.codePoint.toString(),
           createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
         );
-        await categoryOperations.createCategory(newCategory);
+        await ref.read(categoryOperationsProvider.notifier).saveCategory(newCategory);
       }
 
       if (mounted) {
@@ -480,10 +452,21 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen> {
     );
   }
 
+  Color _parseColor(String colorString) {
+    try {
+      // Remove '#' if present
+      String cleanColor = colorString.replaceAll('#', '');
+      // Parse as hex and create Color
+      return Color(int.parse('FF$cleanColor', radix: 16));
+    } catch (e) {
+      // Return default color if parsing fails
+      return Colors.blue;
+    }
+  }
+
   void _deleteCategory(Category category) async {
     try {
-      final categoryOperations = ref.read(categoryOperationsProvider);
-      await categoryOperations.deleteCategory(category.id);
+      await ref.read(categoryOperationsProvider.notifier).deleteCategory(category.id);
       
       if (mounted) {
         Navigator.of(context).pop();

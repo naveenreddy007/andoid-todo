@@ -179,6 +179,7 @@ class DatabaseHelper {
   Future<String> insertTodo(Map<String, dynamic> todo) async {
     final db = await database;
     await db.insert(DatabaseConstants.todosTable, todo);
+    notifyListeners();
     return todo[DatabaseConstants.todoId];
   }
 
@@ -210,6 +211,7 @@ class DatabaseHelper {
       where: '${DatabaseConstants.todoId} = ?',
       whereArgs: [id],
     );
+    notifyListeners();
   }
 
   Future<void> deleteTodo(String id) async {
@@ -223,6 +225,7 @@ class DatabaseHelper {
       where: '${DatabaseConstants.todoId} = ?',
       whereArgs: [id],
     );
+    notifyListeners();
   }
 
   Future<void> close() async {

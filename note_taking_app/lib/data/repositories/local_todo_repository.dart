@@ -16,14 +16,23 @@ class LocalTodoRepository implements TodoRepository {
   final _todosStreamController = StreamController<List<Todo>>.broadcast();
 
   LocalTodoRepository(this._databaseHelper) {
+    // Load initial data
+    getAllTodos().then((todos) {
+      print('🔄 LocalTodoRepository: Loading initial todos, count: ${todos.length}');
+      _todosStreamController.add(todos);
+    });
+    
+    // Listen for database changes
     _databaseHelper.databaseStream.listen((_) {
-      getAllTodos().then((todos) => _todosStreamController.add(todos));
+      getAllTodos().then((todos) {
+        print('🔄 LocalTodoRepository: Database changed, reloading todos, count: ${todos.length}');
+        _todosStreamController.add(todos);
+      });
     });
   }
 
   @override
   Stream<List<Todo>> watchTodos() {
-    getAllTodos().then((todos) => _todosStreamController.add(todos));
     return _todosStreamController.stream;
   }
 
@@ -99,6 +108,9 @@ class LocalTodoRepository implements TodoRepository {
         // Handle tags
         await _saveTodoTags(txn, todo.id, todo.tagIds);
       });
+      
+      // Notify listeners after transaction completes
+      _databaseHelper.notifyListeners();
     } catch (e) {
       throw app_exceptions.DatabaseException('Failed to save todo: $e');
     }
@@ -126,6 +138,9 @@ class LocalTodoRepository implements TodoRepository {
         // Handle tags
         await _saveTodoTags(txn, todo.id, todo.tagIds);
       });
+      
+      // Notify listeners after transaction completes
+      _databaseHelper.notifyListeners();
     } catch (e) {
       throw app_exceptions.DatabaseException('Failed to update todo: $e');
     }
@@ -163,6 +178,9 @@ class LocalTodoRepository implements TodoRepository {
           throw app_exceptions.DatabaseException('Todo not found for deletion');
         }
       }
+      
+      // Notify listeners after operation completes
+      _databaseHelper.notifyListeners();
     } catch (e) {
       throw app_exceptions.DatabaseException('Failed to delete todo: $e');
     }
