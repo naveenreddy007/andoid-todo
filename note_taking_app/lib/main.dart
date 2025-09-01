@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:async';
-import 'ui/screens/home_screen.dart';
+import 'ui/widgets/main_navigation.dart';
 import 'ui/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'debug_helper.dart';
@@ -35,7 +35,7 @@ class NoteTakingApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
-      home: const HomeScreen(),
+      home: const MainNavigation(),
       debugShowCheckedModeBanner: false,
     );
   }

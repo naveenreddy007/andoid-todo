@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
+
+import '../../core/utils/date_time_utils.dart';
 import '../../domain/entities/todo.dart';
 import '../../domain/entities/priority.dart';
-import '../../core/utils/date_time_utils.dart';
+import '../../domain/entities/todo_status.dart';
+import '../../providers/todo_provider.dart';
+import '../../providers/tag_provider.dart';
 import '../theme/app_theme.dart';
 
 class TodoCard extends StatelessWidget {
@@ -243,39 +247,114 @@ class TodoCard extends StatelessWidget {
                           spacing: 6,
                           runSpacing: 4,
                           children: todo.tagIds.take(3).map((tagId) {
-                            return DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    theme.colorScheme.primary
-                                        .withValues(alpha: isDark ? 0.24 : 0.18),
-                                    theme.colorScheme.primaryContainer
-                                        .withValues(alpha: isDark ? 0.22 : 0.16),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: theme.colorScheme.onPrimaryContainer
-                                      .withValues(alpha: 0.20),
-                                ),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                child: Text(
-                                  tagId, // TODO: resolve tag name if available
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark
-                                        ? Colors.white.withValues(alpha: 0.95)
-                                        : Colors.black.withValues(alpha: 0.85),
+                            return Consumer(
+                              builder: (context, ref, child) {
+                                final tagAsync = ref.watch(tagProvider(tagId));
+                                return tagAsync.when(
+                                  data: (tag) => DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          theme.colorScheme.primary
+                                              .withValues(alpha: isDark ? 0.24 : 0.18),
+                                          theme.colorScheme.primaryContainer
+                                              .withValues(alpha: isDark ? 0.22 : 0.16),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: theme.colorScheme.onPrimaryContainer
+                                            .withValues(alpha: 0.20),
+                                      ),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      child: Text(
+                                        tag?.name ?? tagId,
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark
+                                              ? Colors.white.withValues(alpha: 0.95)
+                                              : Colors.black.withValues(alpha: 0.85),
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
+                                  loading: () => DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          theme.colorScheme.primary
+                                              .withValues(alpha: isDark ? 0.24 : 0.18),
+                                          theme.colorScheme.primaryContainer
+                                              .withValues(alpha: isDark ? 0.22 : 0.16),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: theme.colorScheme.onPrimaryContainer
+                                            .withValues(alpha: 0.20),
+                                      ),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      child: Text(
+                                        tagId,
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark
+                                              ? Colors.white.withValues(alpha: 0.95)
+                                              : Colors.black.withValues(alpha: 0.85),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  error: (_, __) => DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          theme.colorScheme.primary
+                                              .withValues(alpha: isDark ? 0.24 : 0.18),
+                                          theme.colorScheme.primaryContainer
+                                              .withValues(alpha: isDark ? 0.22 : 0.16),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: theme.colorScheme.onPrimaryContainer
+                                            .withValues(alpha: 0.20),
+                                      ),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      child: Text(
+                                        tagId,
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: isDark
+                                              ? Colors.white.withValues(alpha: 0.95)
+                                              : Colors.black.withValues(alpha: 0.85),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
                             );
                           }).toList(),
                         ),
@@ -289,26 +368,13 @@ class TodoCard extends StatelessWidget {
   }
 
   Widget _buildPriorityIndicator(BuildContext context) {
-    Color color;
-    switch (todo.priority) {
-      case Priority.high:
-        color = PriorityColors.high;
-        break;
-      case Priority.medium:
-        color = PriorityColors.medium;
-        break;
-      case Priority.low:
-        color = PriorityColors.low;
-        break;
-      case Priority.urgent:
-        color = Colors.purple;
-        break;
-    }
-
     return Container(
       width: 8,
       height: 8,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: todo.priority.color,
+        shape: BoxShape.circle,
+      ),
     );
   }
 }
