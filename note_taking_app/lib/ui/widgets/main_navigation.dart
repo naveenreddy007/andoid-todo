@@ -3,6 +3,7 @@ import '../screens/home_screen.dart';
 import '../screens/categories_screen.dart';
 import '../screens/tags_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/search_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -50,6 +51,20 @@ class _MainNavigationState extends State<MainNavigation> {
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const SearchScreen(),
+            ),
+          );
+        },
+        backgroundColor: Theme.of(context).primaryColor,
+        child: const Icon(
+          Icons.search,
+          color: Colors.white,
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(

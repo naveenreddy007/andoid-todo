@@ -6,6 +6,8 @@ import 'ui/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
 import 'debug_helper.dart';
 import 'debug_database_dump.dart';
+import 'providers/search_provider.dart';
+import 'services/search_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,7 +24,11 @@ void main() async {
     DebugHelper.processAdbCommands();
   });
   
-  runApp(const ProviderScope(child: NoteTakingApp()));
+  runApp(
+    const ProviderScope(
+      child: NoteTakingApp(),
+    ),
+  );
 }
 
 class NoteTakingApp extends StatelessWidget {
