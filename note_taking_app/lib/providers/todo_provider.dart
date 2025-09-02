@@ -54,11 +54,16 @@ class TodoOperationsNotifier extends StateNotifier<AsyncValue<void>> {
   TodoOperationsNotifier(this._repository) : super(const AsyncValue.data(null));
 
   Future<void> saveTodo(Todo todo) async {
+    print('🔄 DEBUG: TodoOperationsNotifier.saveTodo called - ID: ${todo.id}, Title: "${todo.title}"');
     state = const AsyncValue.loading();
     try {
+      print('💾 DEBUG: Calling repository.saveTodo');
       await _repository.saveTodo(todo);
+      print('✅ DEBUG: Repository.saveTodo completed successfully');
       state = const AsyncValue.data(null);
+      print('🎯 DEBUG: TodoOperationsNotifier state set to success');
     } catch (error, stackTrace) {
+      print('❌ DEBUG: TodoOperationsNotifier.saveTodo error: $error');
       state = AsyncValue.error(error, stackTrace);
     }
   }

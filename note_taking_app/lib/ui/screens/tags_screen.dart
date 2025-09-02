@@ -25,7 +25,7 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tagsAsync = ref.watch(tagsProvider);
+    final tagsAsync = ref.watch(tagsStreamProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -363,6 +363,9 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
 
       if (mounted) {
         Navigator.of(context).pop();
+        // Refresh the tags list
+        ref.invalidate(tagsProvider);
+        ref.invalidate(tagsStreamProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -414,6 +417,9 @@ class _TagsScreenState extends ConsumerState<TagsScreen> {
       
       if (mounted) {
         Navigator.of(context).pop();
+        // Refresh the tags list
+        ref.invalidate(tagsProvider);
+        ref.invalidate(tagsStreamProvider);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Tag deleted successfully')),
         );

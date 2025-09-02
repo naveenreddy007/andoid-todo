@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../data/repositories/local_tag_repository.dart';
 import '../domain/entities/tag.dart';
@@ -53,11 +55,14 @@ class TagOperationsNotifier extends StateNotifier<AsyncValue<void>> {
   TagOperationsNotifier(this._repository) : super(const AsyncValue.data(null));
 
   Future<void> saveTag(Tag tag) async {
+    developer.log('🏷️ Provider: Saving tag ${tag.name} (${tag.id})', name: 'TagProvider');
     state = const AsyncValue.loading();
     try {
       await _repository.saveTag(tag);
+      developer.log('✅ Provider: Tag saved successfully ${tag.name}', name: 'TagProvider');
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
+      developer.log('❌ Provider: Failed to save tag: $error', name: 'TagProvider');
       state = AsyncValue.error(error, stackTrace);
     }
   }
@@ -83,21 +88,27 @@ class TagOperationsNotifier extends StateNotifier<AsyncValue<void>> {
   }
 
   Future<void> addTagToTodo(String todoId, String tagId) async {
+    developer.log('🔗 Provider: Adding tag $tagId to todo $todoId', name: 'TagProvider');
     state = const AsyncValue.loading();
     try {
       await _repository.addTagToTodo(todoId, tagId);
+      developer.log('✅ Provider: Tag added to todo successfully', name: 'TagProvider');
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
+      developer.log('❌ Provider: Failed to add tag to todo: $error', name: 'TagProvider');
       state = AsyncValue.error(error, stackTrace);
     }
   }
 
   Future<void> removeTagFromTodo(String todoId, String tagId) async {
+    developer.log('🔗 Provider: Removing tag $tagId from todo $todoId', name: 'TagProvider');
     state = const AsyncValue.loading();
     try {
       await _repository.removeTagFromTodo(todoId, tagId);
+      developer.log('✅ Provider: Tag removed from todo successfully', name: 'TagProvider');
       state = const AsyncValue.data(null);
     } catch (error, stackTrace) {
+      developer.log('❌ Provider: Failed to remove tag from todo: $error', name: 'TagProvider');
       state = AsyncValue.error(error, stackTrace);
     }
   }

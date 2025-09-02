@@ -33,6 +33,7 @@ class LocalTodoRepository implements TodoRepository {
 
   @override
   Stream<List<Todo>> watchTodos() {
+    print('👀 DEBUG: watchTodos() called - returning stream');
     return _todosStreamController.stream;
   }
 
@@ -93,25 +94,34 @@ class LocalTodoRepository implements TodoRepository {
 
   @override
   Future<void> saveTodo(Todo todo) async {
+    print('💾 DEBUG: LocalTodoRepository.saveTodo called - ID: ${todo.id}, Title: "${todo.title}"');
     try {
       final db = await _databaseHelper.database;
+      print('🗄️ DEBUG: Got database instance');
+      
       await db.transaction((txn) async {
         final todoModel = TodoModel.fromEntity(todo);
+        print('🔄 DEBUG: Created TodoModel from entity');
 
         // Insert or update todo
-        await txn.insert(
+        final result = await txn.insert(
           DatabaseConstants.todosTable,
           todoModel.toJson(),
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
+        print('✅ DEBUG: Inserted todo into database, result: $result');
 
         // Handle tags
         await _saveTodoTags(txn, todo.id, todo.tagIds);
+        print('🏷️ DEBUG: Saved todo tags: ${todo.tagIds}');
       });
       
       // Notify listeners after transaction completes
+      print('🔔 DEBUG: Calling notifyListeners()');
       _databaseHelper.notifyListeners();
+      print('✅ DEBUG: LocalTodoRepository.saveTodo completed successfully');
     } catch (e) {
+      print('❌ DEBUG: LocalTodoRepository.saveTodo error: $e');
       throw app_exceptions.DatabaseException('Failed to save todo: $e');
     }
   }

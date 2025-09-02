@@ -1,28 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:async';
-import 'ui/widgets/main_navigation.dart';
-import 'ui/theme/app_theme.dart';
-import 'core/constants/app_constants.dart';
-import 'debug_helper.dart';
-import 'debug_database_dump.dart';
-import 'providers/search_provider.dart';
-import 'services/search_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() async {
+import 'data/database/database_helper.dart';
+import 'providers/theme_provider.dart';
+import 'providers/reminder_provider.dart';
+import 'ui/widgets/main_navigation.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Insert test todos for debugging
-  await DebugHelper.insertTestTodos();
-  await DebugHelper.fetchAndPrintTodos();
+  // Initialize database
+  await DatabaseHelper.instance.database;
   
-  // Dump database contents for ADB verification
-  await DatabaseDumper.dumpTodosOnly();
-  
-  // Start ADB command processing timer
-  Timer.periodic(const Duration(seconds: 2), (timer) {
-    DebugHelper.processAdbCommands();
-  });
+  // Initialize shared preferences
+  await SharedPreferences.getInstance();
   
   runApp(
     const ProviderScope(
@@ -31,18 +23,36 @@ void main() async {
   );
 }
 
-class NoteTakingApp extends StatelessWidget {
+class NoteTakingApp extends ConsumerWidget {
   const NoteTakingApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: AppConstants.appName,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      home: const MainNavigation(),
-      debugShowCheckedModeBanner: false,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(currentThemeModeProvider);
+    final lightTheme = ref.watch(lightThemeProvider);
+    final darkTheme = ref.watch(darkThemeProvider);
+    final animationDuration = ref.watch(themeAnimationDurationProvider);
+    
+    // Initialize reminder service
+    ref.watch(reminderServiceInitProvider);
+    
+    return AnimatedTheme(
+      duration: animationDuration,
+      data: themeMode == ThemeMode.dark ? darkTheme : lightTheme,
+      child: MaterialApp(
+        title: 'Note Taking App',
+        theme: lightTheme,
+        darkTheme: darkTheme,
+        themeMode: themeMode,
+        home: const MainNavigation(),
+        debugShowCheckedModeBanner: false,
+        builder: (context, child) {
+          return AnimatedSwitcher(
+            duration: animationDuration,
+            child: child,
+          );
+        },
+      ),
     );
   }
 }

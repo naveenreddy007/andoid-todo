@@ -104,12 +104,14 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
   /// Perform search with debouncing
   void search(String query) {
+    debugPrint('🔍 SearchProvider: Search called with query: "$query"');
     state = state.copyWith(currentQuery: query);
 
     // Cancel previous timer
     _debounceTimer?.cancel();
     
     if (query.trim().isEmpty) {
+      debugPrint('🔍 SearchProvider: Empty query, clearing results');
       _clearResults();
       return;
     }
@@ -137,6 +139,9 @@ class SearchNotifier extends StateNotifier<SearchState> {
   Future<void> _performSearch(String query) async {
     if (query.trim().isEmpty) return;
     
+    debugPrint('🔍 SearchProvider: Starting search for query: "$query"');
+    debugPrint('🔍 SearchProvider: Filters - status: ${state.statusFilter}, priority: ${state.priorityFilter}, category: ${state.categoryFilter}, tags: ${state.tagFilters}');
+    
     state = state.copyWith(isSearching: true);
 
     try {
@@ -151,6 +156,8 @@ class SearchNotifier extends StateNotifier<SearchState> {
         dueDateTo: state.dueDateTo,
       );
       
+      debugPrint('🔍 SearchProvider: Search completed - found ${result.todos.length} todos, ${result.categories.length} categories, ${result.tags.length} tags');
+      
       final updatedHistory = _addToHistory(query, state.searchHistory);
       state = state.copyWith(
         searchResult: result,
@@ -158,7 +165,69 @@ class SearchNotifier extends StateNotifier<SearchState> {
         isSearching: false,
       );
     } catch (e) {
-      debugPrint('Search error: $e');
+      debugPrint('❌ SearchProvider: Search error: $e');
+      state = state.copyWith(
+        searchResult: SearchResult(todos: [], categories: [], tags: []),
+        isSearching: false,
+      );
+    }
+  }
+
+  /// Internal method to perform category-only search
+  Future<void> _performCategorySearch(String categoryId) async {
+    state = state.copyWith(isSearching: true);
+
+    try {
+      final todos = await _searchService.getTodosByCategory(
+        categoryId,
+        statusFilter: state.statusFilter,
+        priorityFilter: state.priorityFilter,
+        sortBy: state.sortBy,
+      );
+      
+      final result = SearchResult(
+        todos: todos,
+        categories: [],
+        tags: [],
+      );
+      
+      state = state.copyWith(
+        searchResult: result,
+        isSearching: false,
+      );
+    } catch (e) {
+      debugPrint('Category search error: $e');
+      state = state.copyWith(
+        searchResult: SearchResult(todos: [], categories: [], tags: []),
+        isSearching: false,
+      );
+    }
+  }
+
+  /// Internal method to perform tag-only search
+  Future<void> _performTagSearch(String tagId) async {
+    state = state.copyWith(isSearching: true);
+
+    try {
+      final todos = await _searchService.getTodosByTag(
+        tagId,
+        statusFilter: state.statusFilter,
+        priorityFilter: state.priorityFilter,
+        sortBy: state.sortBy,
+      );
+      
+      final result = SearchResult(
+        todos: todos,
+        categories: [],
+        tags: [],
+      );
+      
+      state = state.copyWith(
+        searchResult: result,
+        isSearching: false,
+      );
+    } catch (e) {
+      debugPrint('Tag search error: $e');
       state = state.copyWith(
         searchResult: SearchResult(todos: [], categories: [], tags: []),
         isSearching: false,
@@ -183,6 +252,12 @@ class SearchNotifier extends StateNotifier<SearchState> {
       state = state.copyWith(statusFilter: filter);
       if (state.hasQuery) {
         searchImmediate(state.currentQuery);
+      } else if (state.categoryFilter != null) {
+        // Refresh category search with new status filter
+        _performCategorySearch(state.categoryFilter!);
+      } else if (state.tagFilters.isNotEmpty) {
+        // Refresh tag search with new status filter
+        _performTagSearch(state.tagFilters.first);
       }
     }
   }
@@ -193,6 +268,12 @@ class SearchNotifier extends StateNotifier<SearchState> {
       state = state.copyWith(priorityFilter: priority);
       if (state.hasQuery) {
         searchImmediate(state.currentQuery);
+      } else if (state.categoryFilter != null) {
+        // Refresh category search with new priority filter
+        _performCategorySearch(state.categoryFilter!);
+      } else if (state.tagFilters.isNotEmpty) {
+        // Refresh tag search with new priority filter
+        _performTagSearch(state.tagFilters.first);
       }
     }
   }
@@ -213,6 +294,12 @@ class SearchNotifier extends StateNotifier<SearchState> {
       state = state.copyWith(categoryFilter: categoryId);
       if (state.hasQuery) {
         searchImmediate(state.currentQuery);
+      } else if (categoryId != null) {
+        // Perform category-only search when no text query
+        _performCategorySearch(categoryId);
+      } else {
+        // Clear results when category filter is removed and no query
+        _clearResults();
       }
     }
   }
@@ -224,6 +311,12 @@ class SearchNotifier extends StateNotifier<SearchState> {
       state = state.copyWith(tagFilters: updatedFilters);
       if (state.hasQuery) {
         searchImmediate(state.currentQuery);
+      } else if (state.categoryFilter != null) {
+        // Refresh category search with new tag filter
+        _performCategorySearch(state.categoryFilter!);
+      } else if (updatedFilters.length == 1) {
+        // Perform tag-only search when this is the first tag
+        _performTagSearch(tagId);
       }
     }
   }
@@ -235,6 +328,15 @@ class SearchNotifier extends StateNotifier<SearchState> {
       state = state.copyWith(tagFilters: updatedFilters);
       if (state.hasQuery) {
         searchImmediate(state.currentQuery);
+      } else if (state.categoryFilter != null) {
+        // Refresh category search with updated tag filters
+        _performCategorySearch(state.categoryFilter!);
+      } else if (updatedFilters.isEmpty) {
+        // Clear results when no filters remain
+        _clearResults();
+      } else {
+        // Perform search with remaining tags
+        _performTagSearch(updatedFilters.first);
       }
     }
   }
@@ -245,6 +347,12 @@ class SearchNotifier extends StateNotifier<SearchState> {
       state = state.copyWith(tagFilters: []);
       if (state.hasQuery) {
         searchImmediate(state.currentQuery);
+      } else if (state.categoryFilter != null) {
+        // Refresh category search without tag filters
+        _performCategorySearch(state.categoryFilter!);
+      } else {
+        // Clear results when no filters remain
+        _clearResults();
       }
     }
   }

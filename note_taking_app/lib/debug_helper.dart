@@ -3,7 +3,9 @@ import 'package:uuid/uuid.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'data/repositories/local_todo_repository.dart';
+import 'data/repositories/local_tag_repository.dart';
 import 'domain/entities/todo.dart';
+import 'domain/entities/tag.dart';
 import 'domain/entities/todo_status.dart';
 import 'domain/entities/priority.dart';
 import 'services/local/database_helper.dart';
@@ -104,48 +106,72 @@ class DebugHelper {
     debugPrint('🔄 Checking for ADB commands...');
     
     try {
-      final directory = Directory('/data/data/com.notetaking.app.note_taking_app/files');
-      final commandFile = File('${directory.path}/adb_command.json');
-      final responseFile = File('${directory.path}/adb_response.json');
+      // Check both internal and external storage locations
+      final locations = [
+        '/data/data/com.notetaking.app.note_taking_app/files',
+        '/sdcard'
+      ];
       
-      debugPrint('📁 Checking command file: ${commandFile.path}');
+      for (final location in locations) {
+        final directory = Directory(location);
+        final commandFile = File('${directory.path}/adb_command.json');
+        final responseFile = File('${directory.path}/adb_response.json');
+        
+        debugPrint('📁 Checking command file: ${commandFile.path}');
       
-      if (await commandFile.exists()) {
-        final commandJson = await commandFile.readAsString();
-        final command = jsonDecode(commandJson);
-        
-        debugPrint('📥 Processing ADB command: ${command['action']}');
-        
-        Map<String, dynamic> response = {'success': false, 'data': null, 'error': null};
-        
-        try {
-          switch (command['action']) {
-            case 'create_todo':
-              response = await _createTodoFromAdb(command['data']);
-              break;
-            case 'get_todos':
-              response = await _getTodosForAdb();
-              break;
-            case 'get_todo_count':
-              response = await _getTodoCountForAdb();
-              break;
-            case 'delete_todo':
-              response = await _deleteTodoFromAdb(command['data']);
-              break;
-            default:
-              response['error'] = 'Unknown action: ${command['action']}';
+        if (await commandFile.exists()) {
+          final commandJson = await commandFile.readAsString();
+          final command = jsonDecode(commandJson);
+          
+          debugPrint('📥 Processing ADB command: ${command['action']}');
+          
+          Map<String, dynamic> response = {'success': false, 'data': null, 'error': null};
+          
+          try {
+            switch (command['action']) {
+              case 'create_todo':
+                response = await _createTodoFromAdb(command['data']);
+                break;
+              case 'get_todos':
+                response = await _getTodosForAdb();
+                break;
+              case 'get_todo_count':
+                response = await _getTodoCountForAdb();
+                break;
+              case 'delete_todo':
+                response = await _deleteTodoFromAdb(command['data']);
+                break;
+              case 'create_tag':
+                response = await _createTagFromAdb(command);
+                break;
+              case 'get_tags':
+                response = await _getTagsForAdb();
+                break;
+              case 'add_tag_to_todo':
+                response = await _addTagToTodoFromAdb(command);
+                break;
+              case 'remove_tag_from_todo':
+                response = await _removeTagFromTodoFromAdb(command);
+                break;
+              case 'get_tags_for_todo':
+                response = await _getTagsForTodoFromAdb(command);
+                break;
+              default:
+                response['error'] = 'Unknown action: ${command['action']}';
+            }
+          } catch (e) {
+            response['error'] = e.toString();
           }
-        } catch (e) {
-          response['error'] = e.toString();
+          
+          // Write response
+          await responseFile.writeAsString(jsonEncode(response));
+          
+          // Clean up command file
+          await commandFile.delete();
+          
+          debugPrint('📤 ADB command processed, response written');
+          return; // Exit after processing first found command
         }
-        
-        // Write response
-        await responseFile.writeAsString(jsonEncode(response));
-        
-        // Clean up command file
-        await commandFile.delete();
-        
-        debugPrint('📤 ADB command processed, response written');
       }
     } catch (e) {
       debugPrint('❌ Error processing ADB commands: $e');
@@ -245,6 +271,133 @@ class DebugHelper {
       return {
         'success': true,
         'data': {'deleted_id': todoId}
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  // Tag-related ADB methods
+  static Future<Map<String, dynamic>> _createTagFromAdb(Map<String, dynamic> command) async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final repository = LocalTagRepository(dbHelper);
+      
+      final tag = Tag(
+        id: _uuid.v4(),
+        name: command['name'] ?? 'Untitled Tag',
+        color: command['color'] ?? '#2196F3',
+        createdAt: DateTime.now(),
+      );
+      
+      await repository.saveTag(tag);
+      
+      debugPrint('🏷️ Created tag: ${tag.name} with color ${tag.color}');
+      
+      return {
+        'success': true,
+        'data': {
+          'id': tag.id,
+          'name': tag.name,
+          'color': tag.color,
+        }
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> _getTagsForAdb() async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final repository = LocalTagRepository(dbHelper);
+      
+      final tags = await repository.getAllTags();
+      
+      return {
+        'success': true,
+        'data': tags.map((tag) => {
+          'id': tag.id,
+          'name': tag.name,
+          'color': tag.color,
+          'created_at': tag.createdAt.millisecondsSinceEpoch,
+        }).toList()
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> _addTagToTodoFromAdb(Map<String, dynamic> command) async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final repository = LocalTagRepository(dbHelper);
+      
+      final todoId = command['todo_id'];
+      final tagId = command['tag_id'];
+      
+      if (todoId == null || tagId == null) {
+        return {'success': false, 'error': 'Both todo_id and tag_id are required'};
+      }
+      
+      await repository.addTagToTodo(todoId, tagId);
+      
+      debugPrint('🔗 Added tag $tagId to todo $todoId');
+      
+      return {
+        'success': true,
+        'data': {'todo_id': todoId, 'tag_id': tagId}
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> _removeTagFromTodoFromAdb(Map<String, dynamic> command) async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final repository = LocalTagRepository(dbHelper);
+      
+      final todoId = command['todo_id'];
+      final tagId = command['tag_id'];
+      
+      if (todoId == null || tagId == null) {
+        return {'success': false, 'error': 'Both todo_id and tag_id are required'};
+      }
+      
+      await repository.removeTagFromTodo(todoId, tagId);
+      
+      debugPrint('🔗 Removed tag $tagId from todo $todoId');
+      
+      return {
+        'success': true,
+        'data': {'todo_id': todoId, 'tag_id': tagId}
+      };
+    } catch (e) {
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  static Future<Map<String, dynamic>> _getTagsForTodoFromAdb(Map<String, dynamic> command) async {
+    try {
+      final dbHelper = DatabaseHelper();
+      final repository = LocalTagRepository(dbHelper);
+      
+      final todoId = command['todo_id'];
+      
+      if (todoId == null) {
+        return {'success': false, 'error': 'todo_id is required'};
+      }
+      
+      final tags = await repository.getTagsForTodo(todoId);
+      
+      return {
+        'success': true,
+        'data': tags.map((tag) => {
+          'id': tag.id,
+          'name': tag.name,
+          'color': tag.color,
+        }).toList()
       };
     } catch (e) {
       return {'success': false, 'error': e.toString()};

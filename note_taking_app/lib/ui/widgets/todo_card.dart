@@ -243,120 +243,89 @@ class TodoCard extends StatelessWidget {
                       // Tags
                       if (todo.tagIds.isNotEmpty) ...[
                         const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: todo.tagIds.take(3).map((tagId) {
-                            return Consumer(
-                              builder: (context, ref, child) {
-                                final tagAsync = ref.watch(tagProvider(tagId));
-                                return tagAsync.when(
-                                  data: (tag) => DecoratedBox(
+                        Consumer(
+                          builder: (context, ref, child) {
+                            final tagsAsync = ref.watch(tagsForTodoProvider(todo.id));
+                            return tagsAsync.when(
+                              data: (tags) => Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: tags.map((tag) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          theme.colorScheme.primary
-                                              .withValues(alpha: isDark ? 0.24 : 0.18),
-                                          theme.colorScheme.primaryContainer
-                                              .withValues(alpha: isDark ? 0.22 : 0.16),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: theme.colorScheme.onPrimaryContainer
-                                            .withValues(alpha: 0.20),
+                                      color: tag.color != null
+                                          ? Color(int.parse(tag.color!, radix: 16))
+                                              .withOpacity(0.2)
+                                          : Colors.grey.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      tag.name,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: tag.color != null
+                                            ? Color(int.parse(tag.color!, radix: 16))
+                                            : Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      child: Text(
-                                        tag?.name ?? tagId,
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark
-                                              ? Colors.white.withValues(alpha: 0.95)
-                                              : Colors.black.withValues(alpha: 0.85),
-                                        ),
-                                      ),
+                                  );
+                                }).toList(),
+                              ),
+                              loading: () => Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: todo.tagIds.map((tagId) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
                                     ),
-                                  ),
-                                  loading: () => DecoratedBox(
                                     decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          theme.colorScheme.primary
-                                              .withValues(alpha: isDark ? 0.24 : 0.18),
-                                          theme.colorScheme.primaryContainer
-                                              .withValues(alpha: isDark ? 0.22 : 0.16),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: theme.colorScheme.onPrimaryContainer
-                                            .withValues(alpha: 0.20),
+                                      color: Colors.grey.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      'Loading...',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      child: Text(
-                                        tagId,
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark
-                                              ? Colors.white.withValues(alpha: 0.95)
-                                              : Colors.black.withValues(alpha: 0.85),
-                                        ),
-                                      ),
+                                  );
+                                }).toList(),
+                              ),
+                              error: (error, stack) => Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: todo.tagIds.map((tagId) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
                                     ),
-                                  ),
-                                  error: (_, __) => DecoratedBox(
                                     decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [
-                                          theme.colorScheme.primary
-                                              .withValues(alpha: isDark ? 0.24 : 0.18),
-                                          theme.colorScheme.primaryContainer
-                                              .withValues(alpha: isDark ? 0.22 : 0.16),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: theme.colorScheme.onPrimaryContainer
-                                            .withValues(alpha: 0.20),
+                                      color: Colors.red.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      tagId,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: Colors.red[600],
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      child: Text(
-                                        tagId,
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                          color: isDark
-                                              ? Colors.white.withValues(alpha: 0.95)
-                                              : Colors.black.withValues(alpha: 0.85),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
+                                  );
+                                }).toList(),
+                              ),
                             );
-                          }).toList(),
+                          },
                         ),
                       ],
                     ],

@@ -135,18 +135,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const TodoEditorScreen(),
-            ),
-          );
-        },
-        tooltip: 'Add Todo',
-        child: const Icon(Symbols.add),
-      ),
+
     );
   }
 

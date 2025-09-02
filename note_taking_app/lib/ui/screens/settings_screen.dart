@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'debug_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -27,6 +28,10 @@ class SettingsScreen extends ConsumerWidget {
             _SectionHeader(icon: Symbols.cloud_sync, title: 'Sync'),
             SizedBox(height: 8),
             _SettingsTile(title: 'Google Drive', subtitle: 'Not connected'),
+            SizedBox(height: 16),
+            _SectionHeader(icon: Symbols.bug_report, title: 'Debug'),
+            SizedBox(height: 8),
+            _DebugTile(),
           ],
         ),
       ),
@@ -137,6 +142,58 @@ class _SettingsTile extends StatelessWidget {
           ),
           const Icon(Symbols.chevron_right),
         ],
+      ),
+    );
+  }
+}
+
+class _DebugTile extends StatelessWidget {
+  const _DebugTile();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const DebugScreen(),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.08),
+          ),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Database Tools',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Push test data & view stats',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
+                      ),
+                ),
+              ],
+            ),
+            const Icon(Symbols.chevron_right),
+          ],
+        ),
       ),
     );
   }

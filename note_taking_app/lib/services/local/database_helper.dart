@@ -172,7 +172,9 @@ class DatabaseHelper {
   }
 
   void notifyListeners() {
+    print('🔔 DEBUG: DatabaseHelper.notifyListeners() called - broadcasting to stream');
     _databaseStreamController.add(null);
+    print('📡 DEBUG: Stream notification sent');
   }
 
   // Basic CRUD operations for todos

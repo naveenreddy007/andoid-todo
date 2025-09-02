@@ -60,14 +60,30 @@ class SearchService {
     DateTime? dueDateFrom,
     DateTime? dueDateTo,
   }) async {
-    if (query.trim().isEmpty) {
+    print('🔍 SearchService: Starting search with query: "$query"');
+    print('🔍 SearchService: Filters - status: $statusFilter, priority: $priorityFilter, category: $categoryFilter, tags: $tagFilters');
+    
+    final lowercaseQuery = query.toLowerCase();
+    final hasTextQuery = query.trim().isNotEmpty;
+    final hasFilters = statusFilter != FilterStatus.all ||
+        priorityFilter != null ||
+        categoryFilter != null ||
+        tagFilters.isNotEmpty ||
+        dueDateFrom != null ||
+        dueDateTo != null;
+
+    print('🔍 SearchService: hasTextQuery: $hasTextQuery, hasFilters: $hasFilters');
+
+    // If no query and no filters, return empty results
+    if (!hasTextQuery && !hasFilters) {
+      print('🔍 SearchService: No query and no filters, returning empty results');
       return SearchResult(todos: [], categories: [], tags: []);
     }
 
-    final lowercaseQuery = query.toLowerCase();
-
     // Search todos
     final allTodos = await _todoRepository.getAllTodos();
+    print('🔍 SearchService: Retrieved ${allTodos.length} todos from repository');
+    
     final filteredTodos = _searchTodos(
       allTodos,
       lowercaseQuery,
@@ -77,22 +93,38 @@ class SearchService {
       tagFilters,
       dueDateFrom,
       dueDateTo,
+      hasTextQuery,
     );
+    print('🔍 SearchService: Filtered to ${filteredTodos.length} todos');
+    
     final sortedTodos = _sortTodos(filteredTodos, sortBy);
 
-    // Search categories
+    // Search categories (only if there's a text query)
     final allCategories = await _categoryRepository.getAllCategories();
-    final filteredCategories = _searchCategories(allCategories, lowercaseQuery);
+    print('🔍 SearchService: Retrieved ${allCategories.length} categories from repository');
+    
+    final filteredCategories = hasTextQuery 
+        ? _searchCategories(allCategories, lowercaseQuery)
+        : <Category>[];
+    print('🔍 SearchService: Filtered to ${filteredCategories.length} categories');
 
-    // Search tags
+    // Search tags (only if there's a text query)
     final allTags = await _tagRepository.getAllTags();
-    final filteredTags = _searchTags(allTags, lowercaseQuery);
+    print('🔍 SearchService: Retrieved ${allTags.length} tags from repository');
+    
+    final filteredTags = hasTextQuery 
+        ? _searchTags(allTags, lowercaseQuery)
+        : <Tag>[];
+    print('🔍 SearchService: Filtered to ${filteredTags.length} tags');
 
-    return SearchResult(
+    final result = SearchResult(
       todos: sortedTodos,
       categories: filteredCategories,
       tags: filteredTags,
     );
+    
+    print('🔍 SearchService: Final result - ${result.todos.length} todos, ${result.categories.length} categories, ${result.tags.length} tags');
+    return result;
   }
 
   /// Search todos by title, description, and associated tags/categories
@@ -105,14 +137,17 @@ class SearchService {
     List<String> tagFilters,
     DateTime? dueDateFrom,
     DateTime? dueDateTo,
+    bool hasTextQuery,
   ) {
     return todos.where((todo) {
-      // Text search
-      final titleMatch = todo.title.toLowerCase().contains(query);
-      final descriptionMatch = todo.description?.toLowerCase().contains(query) ?? false;
-      
-      if (!titleMatch && !descriptionMatch) {
-        return false;
+      // Text search (only if there's a text query)
+      if (hasTextQuery) {
+        final titleMatch = todo.title.toLowerCase().contains(query);
+        final descriptionMatch = todo.description?.toLowerCase().contains(query) ?? false;
+        
+        if (!titleMatch && !descriptionMatch) {
+          return false;
+        }
       }
 
       // Status filter
@@ -279,5 +314,89 @@ class SearchService {
     suggestions.addAll(tags.map((t) => t.name));
 
     return suggestions.take(5).toList();
+  }
+
+  /// Get todos by category without text search requirement
+  Future<List<Todo>> getTodosByCategory(String categoryId, {
+    FilterStatus statusFilter = FilterStatus.all,
+    Priority? priorityFilter,
+    SortOption sortBy = SortOption.dateUpdated,
+  }) async {
+    final allTodos = await _todoRepository.getAllTodos();
+    final filteredTodos = allTodos.where((todo) {
+      // Category filter
+      if (todo.categoryId != categoryId) {
+        return false;
+      }
+
+      // Status filter
+      switch (statusFilter) {
+        case FilterStatus.pending:
+          if (todo.status != TodoStatus.pending) return false;
+          break;
+        case FilterStatus.inProgress:
+          if (todo.status != TodoStatus.inProgress) return false;
+          break;
+        case FilterStatus.completed:
+          if (todo.status != TodoStatus.completed) return false;
+          break;
+        case FilterStatus.cancelled:
+          if (todo.status != TodoStatus.cancelled) return false;
+          break;
+        case FilterStatus.all:
+          break;
+      }
+
+      // Priority filter
+      if (priorityFilter != null && todo.priority != priorityFilter) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+
+    return _sortTodos(filteredTodos, sortBy);
+  }
+
+  /// Get todos by tag without text search requirement
+  Future<List<Todo>> getTodosByTag(String tagId, {
+    FilterStatus statusFilter = FilterStatus.all,
+    Priority? priorityFilter,
+    SortOption sortBy = SortOption.dateUpdated,
+  }) async {
+    final allTodos = await _todoRepository.getAllTodos();
+    final filteredTodos = allTodos.where((todo) {
+      // Tag filter
+      if (!todo.tagIds.contains(tagId)) {
+        return false;
+      }
+
+      // Status filter
+      switch (statusFilter) {
+        case FilterStatus.pending:
+          if (todo.status != TodoStatus.pending) return false;
+          break;
+        case FilterStatus.inProgress:
+          if (todo.status != TodoStatus.inProgress) return false;
+          break;
+        case FilterStatus.completed:
+          if (todo.status != TodoStatus.completed) return false;
+          break;
+        case FilterStatus.cancelled:
+          if (todo.status != TodoStatus.cancelled) return false;
+          break;
+        case FilterStatus.all:
+          break;
+      }
+
+      // Priority filter
+      if (priorityFilter != null && todo.priority != priorityFilter) {
+        return false;
+      }
+
+      return true;
+    }).toList();
+
+    return _sortTodos(filteredTodos, sortBy);
   }
 }

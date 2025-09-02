@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:sqflite/sqflite.dart';
 
@@ -23,17 +24,26 @@ class LocalTagRepository implements TagRepository {
   @override
   Future<List<Tag>> getAllTags() async {
     try {
+      developer.log('🏷️ Getting all tags from database', name: 'TagRepository');
       final db = await _databaseHelper.database;
       final maps = await db.query(
         DatabaseConstants.tagsTable,
         orderBy: '${DatabaseConstants.tagName} ASC',
       );
 
-      return maps.map((map) {
+      developer.log('🏷️ Found ${maps.length} tags in database', name: 'TagRepository');
+      final tags = maps.map((map) {
         final tagModel = TagModel.fromJson(map);
         return tagModel.toEntity();
       }).toList();
+      
+      for (final tag in tags) {
+        developer.log('🏷️ Tag: ${tag.name} (${tag.id}) - Color: ${tag.color}', name: 'TagRepository');
+      }
+      
+      return tags;
     } catch (e) {
+      developer.log('❌ Failed to get all tags: $e', name: 'TagRepository');
       throw app_exceptions.DatabaseException('Failed to get all tags: $e');
     }
   }
@@ -81,14 +91,27 @@ class LocalTagRepository implements TagRepository {
   @override
   Future<void> saveTag(Tag tag) async {
     try {
+      developer.log('💾 Saving tag: ${tag.name} (${tag.id}) - Color: ${tag.color}', name: 'TagRepository');
       final db = await _databaseHelper.database;
       final tagModel = TagModel.fromEntity(tag);
+      final tagData = tagModel.toJson();
+      developer.log('💾 Tag data to save: $tagData', name: 'TagRepository');
+      
       await db.insert(
         DatabaseConstants.tagsTable,
-        tagModel.toJson(),
+        tagData,
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
+      
+      developer.log('✅ Tag saved successfully: ${tag.name}', name: 'TagRepository');
+      
+      // Notify listeners about the database change
+      _databaseHelper.notifyListeners();
+      // Also update the stream immediately
+      final updatedTags = await getAllTags();
+      _tagsStreamController.add(updatedTags);
     } catch (e) {
+      developer.log('❌ Failed to save tag: $e', name: 'TagRepository');
       throw app_exceptions.DatabaseException('Failed to save tag: $e');
     }
   }
@@ -108,6 +131,12 @@ class LocalTagRepository implements TagRepository {
       if (rowsAffected == 0) {
         throw app_exceptions.DatabaseException('Tag not found for update');
       }
+      
+      // Notify listeners about the database change
+      _databaseHelper.notifyListeners();
+      // Also update the stream immediately
+      final updatedTags = await getAllTags();
+      _tagsStreamController.add(updatedTags);
     } catch (e) {
       throw app_exceptions.DatabaseException('Failed to update tag: $e');
     }
@@ -126,6 +155,12 @@ class LocalTagRepository implements TagRepository {
       if (rowsAffected == 0) {
         throw app_exceptions.DatabaseException('Tag not found for deletion');
       }
+      
+      // Notify listeners about the database change
+      _databaseHelper.notifyListeners();
+      // Also update the stream immediately
+      final updatedTags = await getAllTags();
+      _tagsStreamController.add(updatedTags);
     } catch (e) {
       throw app_exceptions.DatabaseException('Failed to delete tag: $e');
     }
@@ -140,6 +175,7 @@ class LocalTagRepository implements TagRepository {
   @override
   Future<List<Tag>> getTagsForTodo(String todoId) async {
     try {
+      developer.log('🔍 Getting tags for todo: $todoId', name: 'TagRepository');
       final db = await _databaseHelper.database;
       final maps = await db.rawQuery(
         '''
@@ -151,11 +187,19 @@ class LocalTagRepository implements TagRepository {
         [todoId],
       );
 
-      return maps.map((map) {
+      developer.log('🔍 Found ${maps.length} tags for todo $todoId', name: 'TagRepository');
+      final tags = maps.map((map) {
         final tagModel = TagModel.fromJson(map);
         return tagModel.toEntity();
       }).toList();
+      
+      for (final tag in tags) {
+        developer.log('🔍 Todo tag: ${tag.name} (${tag.id})', name: 'TagRepository');
+      }
+      
+      return tags;
     } catch (e) {
+      developer.log('❌ Failed to get tags for todo: $e', name: 'TagRepository');
       throw app_exceptions.DatabaseException('Failed to get tags for todo: $e');
     }
   }
@@ -163,12 +207,15 @@ class LocalTagRepository implements TagRepository {
   @override
   Future<void> addTagToTodo(String todoId, String tagId) async {
     try {
+      developer.log('🔗 Adding tag $tagId to todo $todoId', name: 'TagRepository');
       final db = await _databaseHelper.database;
       await db.insert(DatabaseConstants.todoTagsTable, {
         DatabaseConstants.todoTagTodoId: todoId,
         DatabaseConstants.todoTagTagId: tagId,
       }, conflictAlgorithm: ConflictAlgorithm.replace);
+      developer.log('✅ Tag successfully added to todo', name: 'TagRepository');
     } catch (e) {
+      developer.log('❌ Failed to add tag to todo: $e', name: 'TagRepository');
       throw app_exceptions.DatabaseException('Failed to add tag to todo: $e');
     }
   }
@@ -176,14 +223,17 @@ class LocalTagRepository implements TagRepository {
   @override
   Future<void> removeTagFromTodo(String todoId, String tagId) async {
     try {
+      developer.log('🔗 Removing tag $tagId from todo $todoId', name: 'TagRepository');
       final db = await _databaseHelper.database;
-      await db.delete(
+      final rowsAffected = await db.delete(
         DatabaseConstants.todoTagsTable,
         where:
             '${DatabaseConstants.todoTagTodoId} = ? AND ${DatabaseConstants.todoTagTagId} = ?',
         whereArgs: [todoId, tagId],
       );
+      developer.log('✅ Removed tag from todo, rows affected: $rowsAffected', name: 'TagRepository');
     } catch (e) {
+      developer.log('❌ Failed to remove tag from todo: $e', name: 'TagRepository');
       throw app_exceptions.DatabaseException('Failed to remove tag from todo: $e');
     }
   }

@@ -5,9 +5,12 @@ import '../../domain/entities/todo.dart';
 import '../../domain/entities/category.dart';
 import '../../domain/entities/priority.dart';
 import '../../domain/entities/todo_status.dart';
+import '../../domain/entities/tag.dart';
 import '../../providers/providers.dart';
+import '../../providers/tag_provider.dart';
 import '../../core/utils/id_generator.dart';
 import '../../core/utils/date_time_utils.dart';
+import 'tags_screen.dart';
 
 
 class TodoEditorScreen extends ConsumerStatefulWidget {
@@ -28,6 +31,7 @@ class _TodoEditorScreenState extends ConsumerState<TodoEditorScreen> {
   DateTime? _dueDate;
   String? _selectedCategoryId;
   bool _isCompleted = false;
+  List<String> _selectedTagIds = [];
 
   @override
   void initState() {
@@ -43,6 +47,7 @@ class _TodoEditorScreenState extends ConsumerState<TodoEditorScreen> {
       _dueDate = widget.todo!.dueDate;
       _selectedCategoryId = widget.todo!.categoryId;
       _isCompleted = widget.todo!.isCompleted;
+      _selectedTagIds = List.from(widget.todo!.tagIds);
       _isEditing = true;
     }
   }
@@ -73,6 +78,10 @@ class _TodoEditorScreenState extends ConsumerState<TodoEditorScreen> {
           IconButton(
             icon: const Icon(Symbols.priority_high),
             onPressed: _showPriorityPicker,
+          ),
+          IconButton(
+            icon: const Icon(Symbols.label),
+            onPressed: _showTagPicker,
           ),
           IconButton(
             icon: const Icon(Symbols.save),
@@ -216,6 +225,56 @@ class _TodoEditorScreenState extends ConsumerState<TodoEditorScreen> {
                 onTap: _showPriorityPicker,
               ),
             ),
+            const SizedBox(height: 16),
+            
+            // Tags
+            Card(
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final tagsAsyncValue = ref.watch(tagsProvider);
+                  return tagsAsyncValue.when(
+                    data: (allTags) {
+                      final selectedTags = allTags.where((tag) => _selectedTagIds.contains(tag.id)).toList();
+                      return ListTile(
+                        leading: const Icon(Symbols.label),
+                        title: const Text('Tags'),
+                        subtitle: selectedTags.isEmpty
+                            ? const Text('No tags selected')
+                            : Wrap(
+                                spacing: 4,
+                                children: selectedTags.take(3).map((tag) {
+                                  return Chip(
+                                    label: Text(
+                                      tag.name,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    backgroundColor: Color(int.tryParse(tag.color.replaceAll('#', '0xFF')) ?? 0xFF2196F3).withOpacity(0.2),
+                                    side: BorderSide(
+                                      color: Color(int.tryParse(tag.color.replaceAll('#', '0xFF')) ?? 0xFF2196F3),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                        trailing: selectedTags.length > 3
+                            ? Text('+${selectedTags.length - 3} more')
+                            : const Icon(Symbols.chevron_right),
+                        onTap: _showTagPicker,
+                      );
+                    },
+                    loading: () => const ListTile(
+                      leading: Icon(Symbols.label),
+                      title: Text('Tags'),
+                      subtitle: Text('Loading...'),
+                    ),
+                    error: (error, stack) => ListTile(
+                      leading: const Icon(Symbols.label),
+                      title: const Text('Tags'),
+                      subtitle: Text('Error: $error'),
+                    ),
+                  );
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -343,6 +402,107 @@ class _TodoEditorScreenState extends ConsumerState<TodoEditorScreen> {
     );
   }
 
+  void _showTagPicker() {
+    final tagsAsyncValue = ref.read(tagsProvider);
+    tagsAsyncValue.when(
+      data: (allTags) {
+        showDialog(
+          context: context,
+          builder: (context) => StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: const Text('Select Tags'),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  height: 400,
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ListView(
+                          children: allTags.map((tag) {
+                            final isSelected = _selectedTagIds.contains(tag.id);
+                            return CheckboxListTile(
+                              title: Text(tag.name),
+                              subtitle: Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: Color(int.tryParse(tag.color.replaceAll('#', '0xFF')) ?? 0xFF2196F3),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              value: isSelected,
+                              onChanged: (bool? value) {
+                                setDialogState(() {
+                                  if (value == true) {
+                                    _selectedTagIds.add(tag.id);
+                                  } else {
+                                    _selectedTagIds.remove(tag.id);
+                                  }
+                                });
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const TagsScreen(),
+                                ),
+                              ).then((_) {
+                                // Refresh tags after returning from tags screen
+                                ref.invalidate(tagsProvider);
+                                Navigator.pop(context);
+                              });
+                            },
+                            child: const Text('Manage Tags'),
+                          ),
+                          Row(
+                            children: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                child: const Text('Cancel'),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton(
+                                onPressed: () {
+                                  setState(() {
+                                    // Update the main screen state
+                                  });
+                                  Navigator.pop(context);
+                                },
+                                child: const Text('Done'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+      loading: () => ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Loading tags...')),
+      ),
+      error: (error, stack) => ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading tags: $error')),
+      ),
+    );
+  }
+
   Color _getPriorityColor(Priority priority) {
     switch (priority) {
       case Priority.high:
@@ -360,7 +520,10 @@ class _TodoEditorScreenState extends ConsumerState<TodoEditorScreen> {
     final title = _titleController.text.trim();
     final description = _descriptionController.text.trim();
 
+    print('🔍 DEBUG: Starting _saveTodo - Title: "$title", IsEditing: $_isEditing');
+
     if (title.isEmpty) {
+      print('❌ DEBUG: Title is empty, showing error');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Title is required')),
       );
@@ -368,15 +531,16 @@ class _TodoEditorScreenState extends ConsumerState<TodoEditorScreen> {
     }
 
     final now = DateTime.now();
+    final todoId = widget.todo?.id ?? IdGenerator.generateId();
     final todo = Todo(
-      id: widget.todo?.id ?? IdGenerator.generateId(),
+      id: todoId,
       title: title,
       description: description.isEmpty ? null : description,
       status: _isCompleted ? TodoStatus.completed : TodoStatus.pending,
       priority: _selectedPriority,
       dueDate: _dueDate,
       categoryId: _selectedCategoryId,
-      tagIds: widget.todo?.tagIds ?? [],
+      tagIds: _selectedTagIds,
       createdAt: widget.todo?.createdAt ?? now,
       updatedAt: now,
       completedAt: _isCompleted ? (widget.todo?.completedAt ?? now) : null,
@@ -387,21 +551,29 @@ class _TodoEditorScreenState extends ConsumerState<TodoEditorScreen> {
       reminderIds: widget.todo?.reminderIds ?? [],
     );
 
+    print('📝 DEBUG: Created todo object - ID: $todoId, Title: "${todo.title}", Status: ${todo.status}');
+
     try {
       final operations = ref.read(todoOperationsProvider.notifier);
+      print('🔄 DEBUG: Got operations provider, calling ${_isEditing ? "updateTodo" : "saveTodo"}');
+      
       if (_isEditing) {
         await operations.updateTodo(todo);
+        print('✅ DEBUG: updateTodo completed successfully');
       } else {
         await operations.saveTodo(todo);
+        print('✅ DEBUG: saveTodo completed successfully');
       }
 
       if (mounted) {
+        print('🏠 DEBUG: Navigating back and showing success message');
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Todo saved successfully')),
         );
       }
     } catch (e) {
+      print('❌ DEBUG: Error saving todo: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save todo: $e')),
